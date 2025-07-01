@@ -1,0 +1,13 @@
+
+services:
+  frontend:
+    build:
+      context: .
+    container_name: finverse-frontend
+    volumes:
+      - .:/app
+    ports:
+      - "5173:5173"
+    command: npm run dev
+    environment:
+      - FINVERSE_API_URL=http://localhost:3000
