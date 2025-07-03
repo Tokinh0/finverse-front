@@ -6,6 +6,7 @@ export interface RawMonthlyStatement {
   first_transaction_date?: string;
   last_transaction_date?: string;
   statement_type?: string;
+  status?: string;
 }
 
 export class MonthlyStatementPresenter {
@@ -15,6 +16,7 @@ export class MonthlyStatementPresenter {
   firstTransactionDate: string;
   lastTransactionDate: string;
   statementType: string;
+  status?: string;
 
   constructor(raw: RawMonthlyStatement) {
     this.id = raw.id;
@@ -23,6 +25,7 @@ export class MonthlyStatementPresenter {
     this.firstTransactionDate = raw.first_transaction_date || "Unknown date";
     this.lastTransactionDate = raw.last_transaction_date || "Unknown date";
     this.statementType = raw.statement_type || "";
+    this.status = raw.status || "";
   }
 
   static parseMany(data: RawMonthlyStatement[]): MonthlyStatementPresenter[] {

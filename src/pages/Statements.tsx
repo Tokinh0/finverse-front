@@ -12,12 +12,17 @@ import {
   MonthlyStatementPresenter,
   RawMonthlyStatement,
 } from "../presenters/MonthlyStatementPresenter";
+import UploadSummaryModal from "../components/UploadSummaryModal";
+import { SummaryLinePresenter, RawSummaryLine } from "../presenters/SummaryLinePresenter";
+
 
 export default function Statements() {
   const [files, setFiles] = useState<MonthlyStatementPresenter[]>([]);
   const [newFile, setNewFile] = useState<File | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-
+  const [summaryLines, setSummaryLines] = useState<SummaryLinePresenter[]>([]);
+  const [showSummary, setShowSummary] = useState(false);
+  
   useEffect(() => {
     fetchFiles();
   }, []);
@@ -58,10 +63,11 @@ export default function Statements() {
 
       if (!response.ok) throw new Error("Upload failed");
 
-      const uploaded: RawMonthlyStatement = await response.json();
-      const parsed = new MonthlyStatementPresenter(uploaded);
+      const uploaded = await response.json();
+      const parsed = new MonthlyStatementPresenter(uploaded.statement);
       setFiles((prev) => [...prev, parsed]);
-
+      setSummaryLines(SummaryLinePresenter.parseMany(uploaded.summary_lines));
+      setShowSummary(true);      
       setNewFile(null);
       (document.getElementById("statement-input") as HTMLInputElement).value = "";
     } catch (error) {
@@ -120,6 +126,7 @@ export default function Statements() {
             <tr>
               <th>Type</th>
               <th>Filename</th>
+              <th>Status</th>
               <th>Uploaded At</th>
               <th>First Transaction Date</th>
               <th>Last Transaction Date</th>
@@ -137,6 +144,7 @@ export default function Statements() {
               <tr key={file.id}>
                 <td>{file.statementType}</td>
                 <td>{file.filename}</td>
+                <td>{file.status}</td>
                 <td>{file.uploadedAt}</td>
                 <td>{file.firstTransactionDate}</td>
                 <td>{file.lastTransactionDate}</td>
@@ -150,6 +158,11 @@ export default function Statements() {
           </tbody>
         </Table>
       )}
+      <UploadSummaryModal
+        show={showSummary}
+        onHide={() => setShowSummary(false)}
+        lines={summaryLines}
+      />
     </Container>
   );
 }
