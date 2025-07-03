@@ -13,6 +13,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import { renderCustomPieLabel } from "../utils/chartHelper";
 
 const COLORS = [
   "#0088FE", "#00C49F", "#FFBB28", "#FF8042",
@@ -24,22 +25,22 @@ export default function CategoryChart({ data }) {
 
   if (!data || typeof data !== "object") return <p>Invalid data</p>;
 
-  const chartData = Object.entries(data).map(([category, subcategories]) => ({
+  const chartData = Object.entries(data).map(([category, info]) => ({
     name: category,
-    total: Object.values(subcategories).reduce(
-      (sum, val) => sum + parseFloat(val.total),
+    total: Object.values(info.subcategories).reduce(
+      (sum, sub) => sum + parseFloat(sub.total),
       0
     ),
-  }));
+    color: info.color_code,
+  }));   
 
   if (!chartData.length) return <p>No data to display.</p>;
+  if (chartType !== "pie") resetLabelCollision();
 
   return (
     <div>
-      <h2 style={{ fontSize: "1.1rem" }}>Expenses by Category</h2>
-
       <div style={{ marginBottom: "1rem" }}>
-        <label htmlFor="chartType">Choose chart type: </label>
+        <label htmlFor="chartType" style={{ marginRight: "0.5rem" }}>Choose chart type: </label>
         <select
           id="chartType"
           value={chartType}
@@ -51,7 +52,7 @@ export default function CategoryChart({ data }) {
         </select>
       </div>
 
-      <div style={{ width: "100%", height: 350 }}>
+      <div style={{ width: "100%", height: 550 }}>
         {chartType === "bar" && (
           <ResponsiveContainer>
             <BarChart data={chartData}>
@@ -87,13 +88,22 @@ export default function CategoryChart({ data }) {
                 nameKey="name"
                 cx="50%"
                 cy="50%"
-                outerRadius={100}
-                label={({ name, percent }) =>
-                  `${name} (${(percent * 100).toFixed(0)}%)`
+                outerRadius={180}
+                label={({ cx, cy, midAngle, outerRadius, percent, name, payload, index }) =>
+                  renderCustomPieLabel({
+                    cx,
+                    cy,
+                    midAngle,
+                    outerRadius,
+                    percent,
+                    name,
+                    fill: payload.fill,
+                    index, // ← pass index here
+                  })
                 }
               >
                 {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
             </PieChart>
