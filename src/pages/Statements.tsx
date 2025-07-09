@@ -124,7 +124,6 @@ export default function Statements() {
         <Table striped bordered hover responsive>
           <thead>
             <tr>
-              <th>Type</th>
               <th>Filename</th>
               <th>Status</th>
               <th>Uploaded At</th>
@@ -142,7 +141,6 @@ export default function Statements() {
             })
             .map((file) => (
               <tr key={file.id}>
-                <td>{file.statementType}</td>
                 <td>{file.filename}</td>
                 <td>{file.status}</td>
                 <td>{file.uploadedAt}</td>

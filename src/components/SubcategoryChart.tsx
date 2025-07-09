@@ -20,16 +20,65 @@ const COLORS = [
   "#AA336A", "#33AADD", "#FF6666", "#66CC66"
 ];
 
-// Type for each data point
 interface SubcategoryData {
   name: string;
   total: number;
   color_code?: string;
+  transactions: {
+    name: string;
+    amount: number;
+  }[];
 }
 
 interface Props {
   data: SubcategoryData[];
 }
+
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length > 0) {
+    const data = payload[0].payload;
+    const percent = payload[0].percent; // ← correct place
+
+    return (
+      <div
+        style={{
+          backgroundColor: "rgba(255, 255, 255, 1)",
+          border: "1px solid #ccc",
+          padding: "10px",
+          opacity: 1,
+          zIndex: 9999,
+          textAlign: "left",
+          maxWidth: "400px",
+          overflowX: "auto",
+        }}
+      >
+        <p>
+          <strong>
+            {data.name}
+            {typeof percent === "number" ? ` (${(percent * 100).toFixed(1)}%)` : ""}
+          </strong>
+        </p>
+        <ul style={{ margin: 0, paddingLeft: "0", listStyle: "none" }}>
+          {data.transactions?.map((t: any, idx: number) => (
+            <li
+              key={idx}
+              style={{
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              R$ {t.amount.toFixed(2)} - {t.name.replace(/\s+/g, " ").trim()}
+            </li>
+          ))}
+        </ul>
+        <p><strong>R$ {data.total.toFixed(2)} - Total</strong></p>
+      </div>
+    );
+  }
+
+  return null;
+};
 
 export default function SubcategoryChart({ data }: Props) {
   const [chartType, setChartType] = useState<"bar" | "line" | "pie">("pie");
@@ -41,7 +90,7 @@ export default function SubcategoryChart({ data }: Props) {
     total: typeof entry.total === "string" ? parseFloat(entry.total) : entry.total,
   }));
 
-  if (!chartData.length) return <p>No data to display.</p>;
+  if (!chartData.length) return <p style={{ marginTop: '50%' }}>No data to display.</p>;
 
   return (
     <div>
@@ -98,18 +147,14 @@ export default function SubcategoryChart({ data }: Props) {
         {chartType === "pie" && (
           <ResponsiveContainer>
             <PieChart>
-              <Tooltip formatter={(value) => {
-                if (typeof value === "number") return `R$ ${value.toFixed(2)}`;
-                return `R$ ${value}`;
-              }} />
-              <Legend />
+            <Tooltip content={<CustomTooltip />} />
               <Pie
                 data={chartData}
                 dataKey="total"
                 nameKey="name"
                 cx="50%"
                 cy="50%"
-                outerRadius={180}
+                outerRadius={100}
                 label={({ cx, cy, midAngle, outerRadius, percent, name, payload, index }) =>
                   renderCustomPieLabel({
                     cx,

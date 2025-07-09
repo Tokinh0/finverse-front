@@ -8,6 +8,7 @@ export interface RawSummaryLine {
     parsed_name?: string;
     amount?: number;
     transaction_date?: string;
+    transaction_type?: string;
     category_name?: string;
     subcategory_name?: string;
   };
@@ -22,6 +23,7 @@ export class SummaryLinePresenter {
   name?: string;
   parsedName?: string;
   transactionDate?: string;
+  transactionType?: string;
   categoryName?: string;
   subcategoryName?: string;
 
@@ -37,6 +39,7 @@ export class SummaryLinePresenter {
     this.parsedName = raw.parsed_transaction?.parsed_name ?? undefined;
     this.amount = raw.parsed_transaction?.amount ?? undefined;
     this.transactionDate = raw.parsed_transaction?.transaction_date ?? undefined;
+    this.transactionType = raw.parsed_transaction?.transaction_type ?? undefined;
     this.categoryName = raw.parsed_transaction?.category_name ?? undefined;
     this.subcategoryName = raw.parsed_transaction?.subcategory_name ?? undefined;
   }
