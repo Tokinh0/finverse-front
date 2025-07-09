@@ -88,7 +88,7 @@ export default function CategoryChart({ data }) {
                 nameKey="name"
                 cx="50%"
                 cy="50%"
-                outerRadius={180}
+                outerRadius={120}
                 label={({ cx, cy, midAngle, outerRadius, percent, name, payload, index }) =>
                   renderCustomPieLabel({
                     cx,
@@ -102,8 +102,8 @@ export default function CategoryChart({ data }) {
                   })
                 }
               >
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
+                {chartData.sort((a, b) => b.total - a.total).map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
             </PieChart>

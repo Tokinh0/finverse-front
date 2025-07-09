@@ -18,38 +18,49 @@ export default function UploadSummaryModal({ show, onHide, lines }: Props) {
       </Modal.Header>
       <Modal.Body>
         <h5>✅ Processed Transactions</h5>
-        <Table size="sm" striped bordered>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Parsed Name</th>
-              <th>Parsed Amount</th>
-              <th>Parsed Category</th>
-              <th>Parsed Subcategory</th>
-              <th>Original Row</th>
-            </tr>
-          </thead>
-          <tbody>
-            {processed.map((line) => (
-              <tr key={line.id}>
-                <td>{line.transactionDate}</td>
-                <td>{line.parsedName}</td>
-                <td>
-                  {typeof line.amount === "number" ? `R$ ${line.amount.toFixed(2)}` : "-"}
-                </td>
-                <td>{line.categoryName ?? "-"}</td>
-                <td>{line.subcategoryName ?? "-"}</td>
-                <td>{line.content}</td>
+        <div style={{ overflowX: "auto" }}>
+          <Table size="sm" striped bordered>
+            <thead>
+              <tr>
+                <th style={{ width: "10%" }}>Type</th>
+                <th style={{ width: "10%" }}>Date</th>
+                <th style={{ width: "10%" }}>Status</th>
+                <th style={{ width: "20%" }}>Parsed Name</th>
+                <th style={{ width: "10%" }}>Parsed Amount</th>
+                <th style={{ width: "10%" }}>Parsed Category</th>
+                <th style={{ width: "10%" }}>Parsed Subcategory</th>
+                <th style={{ width: "20%" }}>Original Row</th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
+            </thead>
+            <tbody>
+              {processed.map((line) => (
+                <tr key={line.id}>
+                  <td style={{ width: "10%" }}>{line.transactionType}</td>
+                  <td style={{ width: "10%" }}>
+                    {line.transactionDate
+                      ? new Date(line.transactionDate).toLocaleDateString("pt-BR")
+                      : "-"}
+                  </td>
+                  <td style={{ width: "10%" }}>{line.status}</td>
+                  <td style={{ width: "20%" }}>{line.parsedName}</td>
+                  <td style={{ width: "10%" }}>
+                    {typeof line.amount === "number" ? `R$ ${line.amount.toFixed(2)}` : "-"}
+                  </td>
+                  <td style={{ width: "10%" }}>{line.categoryName ?? "-"}</td>
+                  <td style={{ width: "10%" }}>{line.subcategoryName ?? "-"}</td>
+                  <td style={{ width: "20%" }}>{line.content}</td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </div>
 
         <h5 className="mt-4">❌ Skipped/Errored Rows</h5>
         <Table size="sm" striped bordered>
           <thead>
             <tr>
               <th>Date</th>
+              <th>Status</th>
               <th>Description</th>
               <th>Error</th>
               <th>Raw Content</th>
@@ -59,6 +70,7 @@ export default function UploadSummaryModal({ show, onHide, lines }: Props) {
             {skipped.map((line) => (
               <tr key={line.id}>
                 <td>{line.content[0]}</td>
+                <td>{line.status}</td>
                 <td>{line.content[1]}</td>
                 <td>{line.error}</td>
                 <td>{line.content.slice(2).join(" / ")}</td>
