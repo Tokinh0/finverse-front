@@ -1,0 +1,62 @@
+/* src/styles/MonthlyReport.css */
+
+/* Container wrapping the entire report section */
+.monthly-report-container {
+  margin-bottom: 6rem;
+  padding: 0 1rem;
+}
+
+.monthly-report-container h1 {
+  margin-bottom: 2rem;
+}
+
+/* Flex wrapper for all month cards */
+.month-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  justify-content: center;
+  padding-bottom: 3rem;
+}
+
+/* Individual month card styling */
+.month-card {
+  flex: 1 1 800px;
+  background: #f9f9f9;
+  padding: 1rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.month-card h4 {
+  margin-top: 0;
+}
+
+/* Wrapper for the two panels (credit & debit) */
+.panels {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* Individual panel styling */
+.panel {
+  width: 49%;
+  background: linear-gradient(to bottom right, #ffffff, #f7f7f7);
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  padding: 1rem;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.panel h5 {
+  margin-bottom: 1rem;
+}
+
+
+/* Total line styling under each chart */
+.total {
+  text-align: right;
+  margin-top: 0.5rem;
+  font-weight: bold;
+}

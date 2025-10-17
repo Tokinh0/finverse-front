@@ -1,27 +1,13 @@
 import { useEffect, useState } from "react";
 import { Container, Spinner } from "react-bootstrap";
 import SubcategoryChart from "../../components/SubcategoryChart";
+import "../reports/Report.css";
 
-interface SubcategoryData {
-  name: string;
-  total: number;
-  color_code?: string;
-  transactions: {
-    name: string;
-    amount: number;
-  }[];
+interface Props {
+  showTotals: boolean;
 }
 
-type MonthlyReportData = {
-  [month: string]: SubcategoryData[];
-};
-
-interface FullReport {
-  credit: MonthlyReportData;
-  debit: MonthlyReportData;
-}
-
-export default function MonthlyBySubcategory() {
+export default function MonthlyBySubcategory({ showTotals }: Props) {
   const [creditReport, setCreditReport] = useState<MonthlyReportData>({});
   const [debitReport, setDebitReport] = useState<MonthlyReportData>({});
   const [loading, setLoading] = useState(true);
@@ -57,61 +43,52 @@ export default function MonthlyBySubcategory() {
   ).sort((a, b) => new Date(`${a}-01`).getTime() - new Date(`${b}-01`).getTime());
 
   return (
-    <Container>
+    <Container className="monthly-report-container">
       <h1>Monthly Report by Subcategory</h1>
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "2rem",
-          justifyContent: "center",
-        }}
-      >
-        {allMonths.map((month) => (
-          <div
-            key={month}
-            style={{
-              flex: "1 1 800px",
-              background: "#f9f9f9",
-              padding: "1rem",
-              borderRadius: "10px",
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)",
-            }}
-          >
-            <h4 style={{ marginTop: 0 }}>{month}</h4>
+      <div className="month-cards">
+        {allMonths.map(month => {
+          const creditData = creditReport[month] || { subcategories: [], total: 0 };
+          const debitData  = debitReport[month]  || { subcategories: [], total: 0 };
 
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <div
-                style={{
-                  width: "49%",
-                  background: "linear-gradient(to bottom right, #ffffff, #f7f7f7)",
-                  borderRadius: "10px",
-                  boxShadow: "0 4px 10px rgba(0, 0, 0, 0.05)",
-                  padding: "1rem",
-                  border: "1px solid rgba(0, 0, 0, 0.05)",
-                }}
-              >
-                <h5>Gains (Money In)</h5>
-                <SubcategoryChart data={creditReport[month] || []} />
-              </div>
+          return (
+            <div key={month} className="month-card">
+              <h4>{month}</h4>
+              <div className="panels">
+                <div className="panel">
+                  <h5>Gains (Money In)</h5>
+                  <div className="chart-wrapper">
+                    <SubcategoryChart data={creditData.subcategories} showTotals={showTotals} />
+                  </div>
+                  {showTotals && (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                      {creditData.total > 0 && <p className="total" style={{ color: 'green' }}>Total: R$ {creditData.total.toFixed(2)}</p>}
+                      {creditData.total_invested > 0 && <p className="total" style={{ color: 'green' }}>Total Invested: R$ {creditData.total_invested.toFixed(2)}</p>}
+                      {creditData.total_transfered > 0 && <p className="total" style={{ color: 'green' }}>Total Transfered: R$ {creditData.total_transfered.toFixed(2)}</p>}
+                      {creditData.total_expended > 0 && <p className="total" style={{ color: 'green' }}>Total Expended: R$ {creditData.total_expended.toFixed(2)}</p>}
+                      {creditData.total_received > 0 && <p className="total" style={{ color: 'green' }}>Total Received: R$ {creditData.total_received.toFixed(2)}</p>}
+                    </div>
+                  )}
+                </div>
 
-              <div
-                style={{
-                  width: "49%",
-                  background: "linear-gradient(to bottom right, #ffffff, #f7f7f7)",
-                  borderRadius: "10px",
-                  boxShadow: "0 4px 10px rgba(0, 0, 0, 0.05)",
-                  padding: "1rem",
-                  border: "1px solid rgba(0, 0, 0, 0.05)",
-                }}
-              >
-                <h5>Expenses (Money Out)</h5>
-                <SubcategoryChart data={debitReport[month] || []} />
+                <div className="panel">
+                  <h5>Expenses (Money Out)</h5>
+                  <div className="chart-wrapper">
+                    <SubcategoryChart data={debitData.subcategories} showTotals={showTotals}/>
+                  </div>
+                  {showTotals && (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                      {debitData.total > 0 && <p className="total" style={{ color: 'red' }}>Total: R$ {debitData.total.toFixed(2)}</p>}
+                      {debitData.total_invested > 0 && <p className="total" style={{ color: 'red' }}>Total Invested: R$ {debitData.total_invested.toFixed(2)}</p>}
+                      {debitData.total_transfered > 0 && <p className="total" style={{ color: 'red' }}>Total Transfered: R$ {debitData.total_transfered.toFixed(2)}</p>}
+                      {debitData.total_expended > 0 && <p className="total" style={{ color: 'red' }}>Total Expended: R$ {debitData.total_expended.toFixed(2)}</p>}
+                      {debitData.total_received > 0 && <p className="total" style={{ color: 'red' }}>Total Received: R$ {debitData.total_received.toFixed(2)}</p>}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-
-          </div>
-        ))}
+          );
+        })}
       </div>
     </Container>
   );

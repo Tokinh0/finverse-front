@@ -1,9 +1,14 @@
-import { Navbar, Container, Nav, NavDropdown } from "react-bootstrap";
+import { Navbar, Container, Nav, NavDropdown, Form } from "react-bootstrap";
 import { LinkContainer } from "react-router-bootstrap";
 
-const AppNavbar = () => {
+interface Props {
+  showTotals: boolean;
+  setShowTotals: (value: boolean) => void;
+}
+
+const AppNavbar = ({ showTotals, setShowTotals }: Props) => {
   return (
-    <Navbar bg="dark" variant="dark" expand="md" className="mb-4">
+    <Navbar bg="dark" variant="dark" expand="md" className="mb-4" fixed="top">
       <Container>
         <Navbar.Brand href="/">Finverse</Navbar.Brand>
         <Navbar.Toggle aria-controls="main-navbar-nav" />
@@ -16,10 +21,16 @@ const AppNavbar = () => {
               <Nav.Link>Statements</Nav.Link>
             </LinkContainer>
             <LinkContainer to="/categories&subcategories">
-              <Nav.Link>Categories&Subcategories</Nav.Link>
+              <Nav.Link>Categories & Subcategories</Nav.Link>
             </LinkContainer>
             <LinkContainer to="/keywords">
               <Nav.Link>Keywords</Nav.Link>
+            </LinkContainer>
+            <LinkContainer to="/assets">
+              <Nav.Link>Assets</Nav.Link>
+            </LinkContainer>
+            <LinkContainer to="/goals">
+              <Nav.Link>Goals</Nav.Link>
             </LinkContainer>
             <NavDropdown title="Reports" id="reports-dropdown">
               <LinkContainer to="/reports/monthly-by-category">
@@ -30,6 +41,16 @@ const AppNavbar = () => {
               </LinkContainer>
             </NavDropdown>
           </Nav>
+          <Form className="d-flex ms-auto align-items-center">
+            <Form.Check
+              type="switch"
+              id="toggle-totals"
+              checked={showTotals}
+              onChange={(e) => setShowTotals(e.target.checked)}
+              label={<span title="Toggle totals view">{showTotals ? '👁️' : '🙈'}</span>}
+              style={{ color: "white" }}
+            />
+          </Form>
         </Navbar.Collapse>
       </Container>
     </Navbar>

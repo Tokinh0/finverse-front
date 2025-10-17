@@ -100,7 +100,7 @@ export default function Statements() {
   };
 
   return (
-    <Container className="mt-4">
+    <Container>
       <Row className="align-items-center mb-4">
         <Col><h2>Uploaded Statements</h2></Col>
         <Col md="auto">

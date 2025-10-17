@@ -20,36 +20,23 @@ const COLORS = [
   "#AA336A", "#33AADD", "#FF6666", "#66CC66"
 ];
 
-interface SubcategoryData {
-  name: string;
-  total: number;
-  color_code?: string;
-  transactions: {
-    name: string;
-    amount: number;
-  }[];
-}
-
 interface Props {
   data: SubcategoryData[];
+  showTotals: boolean
 }
 
-const CustomTooltip = ({ active, payload }: any) => {
+const CustomTooltip = ({ active, payload, showTotals }: any) => {
   if (active && payload && payload.length > 0) {
     const data = payload[0].payload;
-    const percent = payload[0].percent; // ← correct place
-
+    const percent = payload[0].percent;
     return (
       <div
         style={{
           backgroundColor: "rgba(255, 255, 255, 1)",
           border: "1px solid #ccc",
           padding: "10px",
-          opacity: 1,
-          zIndex: 9999,
           textAlign: "left",
-          maxWidth: "400px",
-          overflowX: "auto",
+          maxWidth: "100rem",
         }}
       >
         <p>
@@ -58,21 +45,24 @@ const CustomTooltip = ({ active, payload }: any) => {
             {typeof percent === "number" ? ` (${(percent * 100).toFixed(1)}%)` : ""}
           </strong>
         </p>
+        {showTotals && <p><strong>R$ {data.total.toFixed(2)} - Total</strong></p>}
         <ul style={{ margin: 0, paddingLeft: "0", listStyle: "none" }}>
-          {data.transactions?.map((t: any, idx: number) => (
-            <li
-              key={idx}
-              style={{
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              R$ {t.amount.toFixed(2)} - {t.name.replace(/\s+/g, " ").trim()}
-            </li>
-          ))}
+          {[...data.transactions]
+            .sort((a, b) => new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime())
+            .map((t: any, idx: number) => (
+              <li
+                key={idx}
+                style={{
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  color: t.amount > 100 ? (t.amount > 300 ? "red" : 'brown') : "black",
+                }}
+              >
+                {t.transaction_date} - R$ {showTotals ? t.amount.toFixed(2) : '-'} - {t.name.replace(/\s+/g, " ").trim()}
+              </li>
+            ))}
         </ul>
-        <p><strong>R$ {data.total.toFixed(2)} - Total</strong></p>
       </div>
     );
   }
@@ -80,7 +70,8 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
-export default function SubcategoryChart({ data }: Props) {
+
+export default function SubcategoryChart({ data, showTotals }: Props) {
   const [chartType, setChartType] = useState<"bar" | "line" | "pie">("pie");
 
   if (!Array.isArray(data)) return <p>Invalid data</p>;
@@ -147,7 +138,7 @@ export default function SubcategoryChart({ data }: Props) {
         {chartType === "pie" && (
           <ResponsiveContainer>
             <PieChart>
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip/>} showTotals={showTotals} />
               <Pie
                 data={chartData}
                 dataKey="total"
