@@ -5,6 +5,7 @@ interface Subcategory {
   id: number;
   name: string;
   color_code: string;
+  subcategory_type: string;
 }
 
 interface Category {
@@ -85,6 +86,7 @@ export default function CategorySubcategoryManager() {
       id: `temp-${Date.now()}` as unknown as number,
       name: "",
       color_code: "#cccccc",
+      subcategory_type: "",
     };
   
     setCategories((prev) =>
@@ -141,6 +143,7 @@ export default function CategorySubcategoryManager() {
         subcategory: {
           name: subcategory.name,
           color_code: subcategory.color_code,
+          subcategory_type: subcategory.subcategory_type,
           category_id: categoryId,
         },
       }),
@@ -212,6 +215,20 @@ export default function CategorySubcategoryManager() {
                   }
                   onBlur={() => saveSubcategory(sub, category.id)}
                 />
+                <select
+                  className="form-select form-select-sm w-auto"
+                  value={sub.subcategory_type ?? "Unselected"}
+                  onChange={(e) =>
+                    updateSubcategory(category.id, sub.id, "subcategory_type", e.target.value)
+                  }
+                  onBlur={() => saveSubcategory(sub, category.id)}
+                >
+                  <option value="gain">Gain</option>
+                  <option value="expense">Expense</option>
+                  <option value="investment">Investment</option>
+                  <option value="transfer">Transfer</option>
+                  <option value="other">Other</option>
+                </select>
               </div>
             ))}
           </div>
