@@ -9,22 +9,22 @@ import MonthlyBySubcategory from "./pages/reports/MonthlyBySubcategory";
 import { useState } from "react";
 import PortfolioDashboard from "./pages/PortfolioDashboard";
 import { API_BASE_URL } from "./constants/env";
+import KeywordsCrud from "./pages/KeywordsCrud";
 
 function App() {
-  const [showTotals, setShowTotals] = useState(false);
-
   return (
     <div>
-      <AppNavbar showTotals={showTotals} setShowTotals={setShowTotals} />
+      <AppNavbar />
       <br />
       <br />
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/statements" element={<Statements />} />
         <Route path="/categories&subcategories" element={<CategorySubcategoryManager />} />
-        <Route path="/reports/monthly-by-category" element={<MonthlyByCategory showTotals={showTotals} />} />
-        <Route path="/reports/monthly-by-subcategory" element={<MonthlyBySubcategory showTotals={showTotals} />} />
-        <Route path="/assets" element={<PortfolioDashboard showTotals={showTotals} />} />
+        <Route path="/reports/monthly-by-category" element={<MonthlyByCategory />} />
+        <Route path="/reports/monthly-by-subcategory" element={<MonthlyBySubcategory />} />
+        <Route path="/keywords" element={<KeywordsCrud/>} />
+        <Route path="/assets" element={<PortfolioDashboard/>} />
       </Routes>
     </div>
   );

@@ -2,15 +2,13 @@ import { useEffect, useState } from "react";
 import { Container, Spinner } from "react-bootstrap";
 import SubcategoryChart from "../../components/SubcategoryChart";
 import "../reports/Report.css";
+import { useAppSelector } from "../../store/hooks";
 
-interface Props {
-  showTotals: boolean;
-}
-
-export default function MonthlyBySubcategory({ showTotals }: Props) {
+export default function MonthlyBySubcategory() {
   const [creditReport, setCreditReport] = useState<MonthlyReportData>({});
   const [debitReport, setDebitReport] = useState<MonthlyReportData>({});
   const [loading, setLoading] = useState(true);
+  const showTotals = useAppSelector((s) => s.ui.showTotals);
 
   useEffect(() => {
     fetch("http://localhost:3000/api/v1/reports/monthly_by_subcategory")
@@ -57,7 +55,7 @@ export default function MonthlyBySubcategory({ showTotals }: Props) {
                 <div className="panel">
                   <h5>Gains (Money In)</h5>
                   <div className="chart-wrapper">
-                    <SubcategoryChart data={creditData.subcategories} showTotals={showTotals} />
+                    <SubcategoryChart data={creditData.subcategories} />
                   </div>
                   {showTotals && (
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -73,7 +71,7 @@ export default function MonthlyBySubcategory({ showTotals }: Props) {
                 <div className="panel">
                   <h5>Expenses (Money Out)</h5>
                   <div className="chart-wrapper">
-                    <SubcategoryChart data={debitData.subcategories} showTotals={showTotals}/>
+                    <SubcategoryChart data={debitData.subcategories} />
                   </div>
                   {showTotals && (
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
