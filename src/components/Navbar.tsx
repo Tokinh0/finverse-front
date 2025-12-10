@@ -1,11 +1,12 @@
 import { Navbar, Container, Nav, NavDropdown, Form } from "react-bootstrap";
 import { LinkContainer } from "react-router-bootstrap";
-import { useAppDispatch, useAppSelector } from "../store/hooks";
-import { setShowTotals, toggleShowTotals } from "../store/uiSlice";
 
-const AppNavbar = () => {
-  const dispatch = useAppDispatch();
-  const showTotals = useAppSelector((s) => s.ui.showTotals);
+interface Props {
+  showTotals: boolean;
+  setShowTotals: (value: boolean) => void;
+}
+
+const AppNavbar = ({ showTotals, setShowTotals }: Props) => {
   return (
     <Navbar bg="dark" variant="dark" expand="md" className="mb-4" fixed="top">
       <Container>
@@ -43,9 +44,9 @@ const AppNavbar = () => {
           <Form className="d-flex ms-auto align-items-center">
             <Form.Check
               type="switch"
-              id="show-totals-switch"
+              id="toggle-totals"
               checked={showTotals}
-              onChange={() => dispatch(toggleShowTotals())}
+              onChange={(e) => setShowTotals(e.target.checked)}
               label={<span title="Toggle totals view">{showTotals ? '👁️' : '🙈'}</span>}
               style={{ color: "white" }}
             />

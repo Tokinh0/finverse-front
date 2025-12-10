@@ -14,7 +14,6 @@ import {
   Legend,
 } from "recharts";
 import { renderCustomPieLabel } from "../utils/chartHelper";
-import { useAppSelector } from "../store/hooks";
 
 const COLORS = [
   "#0088FE", "#00C49F", "#FFBB28", "#FF8042",
@@ -23,12 +22,11 @@ const COLORS = [
 
 interface Props {
   data: SubcategoryData[];
+  showTotals: boolean
 }
 
-
-const CustomTooltip = ({ active, payload }: any) => {
+const CustomTooltip = ({ active, payload, showTotals }: any) => {
   if (active && payload && payload.length > 0) {
-    const showTotals = useAppSelector((s) => s.ui.showTotals);
     const data = payload[0].payload;
     const percent = payload[0].percent;
     return (
@@ -73,7 +71,7 @@ const CustomTooltip = ({ active, payload }: any) => {
 };
 
 
-export default function SubcategoryChart({ data }: Props) {
+export default function SubcategoryChart({ data, showTotals }: Props) {
   const [chartType, setChartType] = useState<"bar" | "line" | "pie">("pie");
 
   if (!Array.isArray(data)) return <p>Invalid data</p>;
@@ -140,7 +138,7 @@ export default function SubcategoryChart({ data }: Props) {
         {chartType === "pie" && (
           <ResponsiveContainer>
             <PieChart>
-            <Tooltip content={<CustomTooltip/>} />
+            <Tooltip content={<CustomTooltip/>} showTotals={showTotals} />
               <Pie
                 data={chartData}
                 dataKey="total"

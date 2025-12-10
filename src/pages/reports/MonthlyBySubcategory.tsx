@@ -2,13 +2,15 @@ import { useEffect, useState } from "react";
 import { Container, Spinner } from "react-bootstrap";
 import SubcategoryChart from "../../components/SubcategoryChart";
 import "../reports/Report.css";
-import { useAppSelector } from "../../store/hooks";
 
-export default function MonthlyBySubcategory() {
+interface Props {
+  showTotals: boolean;
+}
+
+export default function MonthlyBySubcategory({ showTotals }: Props) {
   const [creditReport, setCreditReport] = useState<MonthlyReportData>({});
   const [debitReport, setDebitReport] = useState<MonthlyReportData>({});
   const [loading, setLoading] = useState(true);
-  const showTotals = useAppSelector((s) => s.ui.showTotals);
 
   useEffect(() => {
     fetch("http://localhost:3000/api/v1/reports/monthly_by_subcategory")
@@ -44,7 +46,7 @@ export default function MonthlyBySubcategory() {
     <Container className="monthly-report-container">
       <h1>Monthly Report by Subcategory</h1>
       <div className="month-cards">
-        {allMonths.map(month => {
+        {allMonths.sort((a, b) => new Date(b).getTime() - new Date(a).getTime()).map(month => {
           const creditData = creditReport[month] || { subcategories: [], total: 0 };
           const debitData  = debitReport[month]  || { subcategories: [], total: 0 };
 
@@ -55,7 +57,7 @@ export default function MonthlyBySubcategory() {
                 <div className="panel">
                   <h5>Gains (Money In)</h5>
                   <div className="chart-wrapper">
-                    <SubcategoryChart data={creditData.subcategories} />
+                    <SubcategoryChart data={creditData.subcategories} showTotals={showTotals} />
                   </div>
                   {showTotals && (
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -71,7 +73,7 @@ export default function MonthlyBySubcategory() {
                 <div className="panel">
                   <h5>Expenses (Money Out)</h5>
                   <div className="chart-wrapper">
-                    <SubcategoryChart data={debitData.subcategories} />
+                    <SubcategoryChart data={debitData.subcategories} showTotals={showTotals}/>
                   </div>
                   {showTotals && (
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
