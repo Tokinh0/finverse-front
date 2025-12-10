@@ -35,7 +35,6 @@ import { createTheme, ThemeProvider } from "@mui/material/styles"
 import { API_BASE_URL } from "../constants/env"
 import AssetFormModal from "../components/assets/AssetFormModal"
 import { formatCurrency } from "../utils/formatter"
-import { useAppSelector } from "../store/hooks"
 
 type SnackbarInfo = { open: boolean; message: string; severity: 'success' | 'error' }
 
@@ -63,8 +62,11 @@ const FILTER_CATEGORIES = [
   'Reserva',
 ] as const
 
+interface Props {
+  showTotals: boolean
+}
 
-export default function PortfolioDashboardMUI() {
+export default function PortfolioDashboardMUI({ showTotals }: Props) {
   // State
   const [assets, setAssets] = useState<Asset[]>([])
   const [portfolioData, setPortfolioData] = useState<PortfolioData[]>([])
@@ -76,8 +78,7 @@ export default function PortfolioDashboardMUI() {
   const [snackbar, setSnackbar] = useState<SnackbarInfo>({ open: false, message: '', severity: 'success' })
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [assetToDelete, setAssetToDelete] = useState<string | null>(null)
-  const showTotals = useAppSelector((s) => s.ui.showTotals);
-  
+
   // Load data
   useEffect(() => {
     async function loadData() {
