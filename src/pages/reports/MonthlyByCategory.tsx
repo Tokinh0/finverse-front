@@ -60,7 +60,7 @@ export default function MonthlyByCategory() {
 
   const allMonths = Array.from(
     new Set([...Object.keys(creditReport), ...Object.keys(debitReport)])
-  ).sort((a, b) => new Date(`${a}-01`).getTime() - new Date(`${b}-01`).getTime());
+  ).sort((a, b) => new Date(`${b}-01`).getTime() - new Date(`${a}-01`).getTime());
 
   return (
     <Container>

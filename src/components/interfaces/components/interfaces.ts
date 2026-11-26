@@ -11,4 +11,5 @@ interface AssetModalProps {
   onSave: (asset: Asset) => void
   asset?: Asset | null
   mode: "create" | "edit"
+  assetTypes: AssetType
 }

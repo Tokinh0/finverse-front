@@ -18,25 +18,18 @@ import {
 } from "@mui/material"
 import { Close as CloseIcon } from "@mui/icons-material"
 
-const assetTypes = [
-  "Ações Internacionais",
-  "Ações Nacionais",
-  "Fundos Imobiliários",
-  "REITs",
-  "Criptomoedas",
-  "Renda Fixa",
-  "Renda Fixa Internacional",
-  "Reserva",
-]
-
-export default function AssetFormModal({ open, onClose, onSave, asset, mode }: AssetModalProps) {
+export default function AssetFormModal({ open, onClose, onSave, asset, mode, assetTypes }: AssetModalProps) {
   const [formData, setFormData] = useState<Asset>({
+    id: "",
     ticker: "",
     asset_type: "",
     description: "",
     current_value: "",
     rating: 1,
     quantity: 0,
+    percentage: 0,
+    percent_by_type: 0,
+    color_code: "",
   })
 
   const [errors, setErrors] = useState<Partial<Asset>>({})
@@ -51,15 +44,22 @@ export default function AssetFormModal({ open, onClose, onSave, asset, mode }: A
         current_value: asset.current_value,
         rating: asset.rating,
         quantity: asset.quantity,
+        percentage: asset.percentage,
+        percent_by_type: asset.percent_by_type,
+        color_code: asset.color_code,
       })
     } else {
       setFormData({
+        id: "",
         ticker: "",
         asset_type: "",
         description: "",
         current_value: "",
         rating: 1,
         quantity: 0,
+        percentage: "0",
+        percent_by_type: 0,
+        color_code: "",
       })
     }
     setErrors({})
@@ -95,7 +95,7 @@ export default function AssetFormModal({ open, onClose, onSave, asset, mode }: A
       newErrors.description = "Descrição é obrigatória"
     }
 
-    if (!formData.current_value.trim()) {
+    if (!formData.current_value) {
       newErrors.current_value = "Valor atual é obrigatório"
     }
 
@@ -120,12 +120,16 @@ export default function AssetFormModal({ open, onClose, onSave, asset, mode }: A
 
   const handleClose = () => {
     setFormData({
+      id: "",
       ticker: "",
       asset_type: "",
       description: "",
       current_value: "",
       rating: 1,
       quantity: 0,
+      percentage: "0",
+      percent_by_type: 0,
+      color_code: "",
     })
     setErrors({})
     onClose()
@@ -172,9 +176,9 @@ export default function AssetFormModal({ open, onClose, onSave, asset, mode }: A
               onChange={(e) => handleInputChange("asset_type", e.target.value)}
               label="Tipo de Ativo"
             >
-              {assetTypes.map((type) => (
-                <MenuItem key={type} value={type}>
-                  {type}
+              {Object.entries(assetTypes).map(([key, value]) => (
+                <MenuItem key={key} value={key}>
+                  {value}
                 </MenuItem>
               ))}
             </Select>

@@ -70,7 +70,8 @@ export default function PortfolioDashboardMUI({ showTotals }: Props) {
   // State
   const [assets, setAssets] = useState<Asset[]>([])
   const [portfolioData, setPortfolioData] = useState<PortfolioData[]>([])
-  const [activeFilter, setActiveFilter] = useState<typeof FILTER_CATEGORIES[number]>('Todos')
+  const [assetTypes, setAssetTypes] = useState<AssetType>({})
+  const [activeFilter, setActiveFilter] = useState<string>('Todos')
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<Mode>('create')
@@ -88,6 +89,7 @@ export default function PortfolioDashboardMUI({ showTotals }: Props) {
         const data = await res.json()
         setAssets(data.assets)
         setPortfolioData(data.portfolioData)
+        setAssetTypes(Object.assign({ Todos: 'Todos' }, data.asset_types))
       } catch (err) {
         console.error(err)
         setSnackbar({ open: true, message: 'Erro ao carregar dados.', severity: 'error' })
@@ -217,12 +219,12 @@ export default function PortfolioDashboardMUI({ showTotals }: Props) {
         {/* Header with filter chips and add button */}
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {FILTER_CATEGORIES.map(cat => (
+            { Object.entries(assetTypes).map(([key, value]) => (
               <Chip
-                key={cat}
-                label={cat}
-                onClick={() => setActiveFilter(cat)}
-                color={activeFilter === cat ? 'primary' : 'default'}
+                key={key}
+                label={value}
+                onClick={() => setActiveFilter(key)}
+                color={activeFilter === key ? 'primary' : 'default'}
                 clickable
               />
             ))}
@@ -382,6 +384,7 @@ export default function PortfolioDashboardMUI({ showTotals }: Props) {
           onSave={handleSaveAsset}
           asset={selectedAsset}
           mode={modalMode}
+          assetTypes={assetTypes}
         />
 
         <Dialog open={confirmOpen} onClose={() => { if (!loading) handleDelete() }}>

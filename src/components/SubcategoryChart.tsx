@@ -36,17 +36,35 @@ const CustomTooltip = ({ active, payload, showTotals }: any) => {
           border: "1px solid #ccc",
           padding: "10px",
           textAlign: "left",
-          maxWidth: "100rem",
+          width: "340px",
+          height: "260px",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          boxSizing: "border-box",
         }}
       >
-        <p>
+        <p style={{ margin: "0 0 4px 0" }}>
           <strong>
             {data.name}
             {typeof percent === "number" ? ` (${(percent * 100).toFixed(1)}%)` : ""}
           </strong>
         </p>
-        {showTotals && <p><strong>R$ {data.total.toFixed(2)} - Total</strong></p>}
-        <ul style={{ margin: 0, paddingLeft: "0", listStyle: "none" }}>
+        {showTotals && (
+          <p style={{ margin: "0 0 8px 0" }}>
+            <strong>R$ {data.total.toFixed(2)} - Total</strong>
+          </p>
+        )}
+        <ul
+          style={{
+            margin: 0,
+            paddingLeft: 0,
+            listStyle: "none",
+            overflowY: "auto",
+            flex: 1,
+            minHeight: 0,
+          }}
+        >
           {[...data.transactions]
             .sort((a, b) => new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime())
             .map((t: any, idx: number) => (

@@ -10,3 +10,7 @@ interface Asset {
   percent_by_type: number
   color_code: string
 }
+
+interface AssetType {
+  [key: string]: string
+}
