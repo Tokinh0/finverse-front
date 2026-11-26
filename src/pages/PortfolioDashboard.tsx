@@ -1,6 +1,4 @@
-"use client"
-
-import React, { useEffect, useState, useMemo, useCallback } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   PieChart,
   Pie,
@@ -32,8 +30,9 @@ import {
 } from "@mui/material"
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material"
 import { createTheme, ThemeProvider } from "@mui/material/styles"
-import { API_BASE_URL } from "../constants/env"
+import { assetsApi, type AssetParams } from "../api"
 import AssetFormModal from "../components/assets/AssetFormModal"
+import type { Asset, AssetTypes, PortfolioSlice } from "../types"
 import { formatCurrency } from "../utils/formatter"
 
 type SnackbarInfo = { open: boolean; message: string; severity: 'success' | 'error' }
@@ -41,6 +40,8 @@ type SnackbarInfo = { open: boolean; message: string; severity: 'success' | 'err
 type Mode = 'create' | 'edit'
 
 // Dark theme
+const ALL = 'Todos'
+
 const darkTheme = createTheme({
   palette: {
     mode: 'dark',
@@ -49,47 +50,32 @@ const darkTheme = createTheme({
   },
 })
 
-// Static filter categories
-const FILTER_CATEGORIES = [
-  'Todos',
-  'Ações Internacionais',
-  'Ações Nacionais',
-  'Fundos Imobiliários',
-  'REITs',
-  'Criptomoedas',
-  'Renda Fixa',
-  'Renda Fixa Internacional',
-  'Reserva',
-] as const
-
 interface Props {
   showTotals: boolean
 }
 
-export default function PortfolioDashboardMUI({ showTotals }: Props) {
+export default function PortfolioDashboard({ showTotals }: Props) {
   // State
   const [assets, setAssets] = useState<Asset[]>([])
-  const [portfolioData, setPortfolioData] = useState<PortfolioData[]>([])
-  const [assetTypes, setAssetTypes] = useState<AssetType>({})
-  const [activeFilter, setActiveFilter] = useState<string>('Todos')
+  const [portfolioData, setPortfolioData] = useState<PortfolioSlice[]>([])
+  const [assetTypes, setAssetTypes] = useState<AssetTypes>({})
+  const [activeFilter, setActiveFilter] = useState<string>(ALL)
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<Mode>('create')
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
   const [snackbar, setSnackbar] = useState<SnackbarInfo>({ open: false, message: '', severity: 'success' })
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const [assetToDelete, setAssetToDelete] = useState<string | null>(null)
+  const [assetToDelete, setAssetToDelete] = useState<number | null>(null)
 
   // Load data
   useEffect(() => {
     async function loadData() {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/v1/portfolio_dashboard`)
-        if (!res.ok) throw new Error(res.statusText)
-        const data = await res.json()
+        const data = await assetsApi.dashboard()
         setAssets(data.assets)
         setPortfolioData(data.portfolioData)
-        setAssetTypes(Object.assign({ Todos: 'Todos' }, data.asset_types))
+        setAssetTypes(data.asset_types)
       } catch (err) {
         console.error(err)
         setSnackbar({ open: true, message: 'Erro ao carregar dados.', severity: 'error' })
@@ -104,7 +90,7 @@ export default function PortfolioDashboardMUI({ showTotals }: Props) {
   const filteredAssets = useMemo(
     () =>
       assets.filter(
-        a => activeFilter === 'Todos' || a.asset_type === activeFilter
+        a => activeFilter === ALL || a.asset_type === activeFilter
       ),
     [assets, activeFilter]
   )
@@ -112,7 +98,7 @@ export default function PortfolioDashboardMUI({ showTotals }: Props) {
   const filteredPortfolio = useMemo(
     () =>
       portfolioData.filter(
-        p => activeFilter === 'Todos' || p.name === activeFilter
+        p => activeFilter === ALL || p.name === activeFilter
       ),
     [portfolioData, activeFilter]
   )
@@ -137,22 +123,13 @@ export default function PortfolioDashboardMUI({ showTotals }: Props) {
   }, [])
 
   const handleSaveAsset = useCallback(
-    async (assetData: Omit<Asset, 'id' | 'percent_by_type' | 'rating' | 'quantity'> & { asset_type: string }) => {
-      const payload = { ...assetData, category: assetData.asset_type }
+    async (assetData: AssetParams) => {
       setLoading(true)
       try {
-        const url =
-          modalMode === 'create'
-            ? `${API_BASE_URL}/api/v1/assets`
-            : `${API_BASE_URL}/api/v1/assets/${selectedAsset?.id}`
-        const method = modalMode === 'create' ? 'POST' : 'PATCH'
-        const res = await fetch(url, {
-          method,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        })
-        if (!res.ok) throw new Error(res.statusText)
-        const saved: Asset = await res.json()
+        const saved =
+          modalMode === 'edit' && selectedAsset
+            ? await assetsApi.update(selectedAsset.id, assetData)
+            : await assetsApi.create(assetData)
         setAssets(prev =>
           modalMode === 'create'
             ? [...prev, saved]
@@ -166,9 +143,9 @@ export default function PortfolioDashboardMUI({ showTotals }: Props) {
               : 'Ativo atualizado com sucesso!',
           severity: 'success',
         })
-      } catch (err: any) {
+      } catch (err) {
         console.error(err)
-        setSnackbar({ open: true, message: err.message, severity: 'error' })
+        setSnackbar({ open: true, message: 'Erro ao salvar o ativo.', severity: 'error' })
       } finally {
         setLoading(false)
         setModalOpen(false)
@@ -181,16 +158,12 @@ export default function PortfolioDashboardMUI({ showTotals }: Props) {
     if (!assetToDelete) return
     setLoading(true)
     try {
-      const res = await fetch(
-        `${API_BASE_URL}/api/v1/assets/${assetToDelete}`,
-        { method: 'DELETE' }
-      )
-      if (!res.ok) throw new Error(res.statusText)
+      await assetsApi.remove(assetToDelete)
       setAssets(prev => prev.filter(a => a.id !== assetToDelete))
       setSnackbar({ open: true, message: 'Ativo excluído com sucesso!', severity: 'success' })
-    } catch (err: any) {
+    } catch (err) {
       console.error(err)
-      setSnackbar({ open: true, message: err.message, severity: 'error' })
+      setSnackbar({ open: true, message: 'Erro ao excluir o ativo.', severity: 'error' })
     } finally {
       setLoading(false)
       setConfirmOpen(false)
@@ -219,7 +192,7 @@ export default function PortfolioDashboardMUI({ showTotals }: Props) {
         {/* Header with filter chips and add button */}
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            { Object.entries(assetTypes).map(([key, value]) => (
+            {Object.entries({ [ALL]: ALL, ...assetTypes }).map(([key, value]) => (
               <Chip
                 key={key}
                 label={value}
@@ -231,7 +204,7 @@ export default function PortfolioDashboardMUI({ showTotals }: Props) {
           </Box>
           <Button
             variant="contained"
-            startIcon={<AddIcon />}            
+            startIcon={<AddIcon />}
             onClick={handleAddAsset}
             sx={{ borderRadius: 2, textTransform: 'none' }}
           >
@@ -241,7 +214,7 @@ export default function PortfolioDashboardMUI({ showTotals }: Props) {
 
         <Grid container spacing={3}>
           {/* Assets Table */}
-          <Grid item xs={12} lg={6}>
+          <Grid size={{ xs: 12, lg: 6 }}>
             <Card sx={{ bgcolor: 'background.paper' }}>
               <CardContent>
                 <Typography variant="h5" fontWeight="bold" gutterBottom>
@@ -265,11 +238,11 @@ export default function PortfolioDashboardMUI({ showTotals }: Props) {
                       {filteredAssets.map(asset => (
                         <TableRow key={asset.id} hover>
                           <TableCell>
-                            <Chip label={asset.asset_type} size="small" sx={{ backgroundColor: asset.color_code }} />
+                            <Chip label={assetTypes[asset.asset_type] ?? asset.asset_type} size="small" sx={{ backgroundColor: asset.color_code ?? undefined }} />
                           </TableCell>
                           <TableCell>{asset.description}</TableCell>
                           <TableCell>{asset.ticker}</TableCell>
-                          <TableCell fontWeight="bold" color="success.main">
+                          <TableCell sx={{ fontWeight: 'bold', color: 'success.main' }}>
                             {showTotals && formatCurrency(asset.current_value)}
                           </TableCell>
                           <TableCell>{asset.percent_by_type}</TableCell>
@@ -280,6 +253,7 @@ export default function PortfolioDashboardMUI({ showTotals }: Props) {
                               size="small"
                               onClick={() => handleEditAsset(asset)}
                               startIcon={<EditIcon />}
+                              aria-label={`Editar ${asset.ticker}`}
                             />
                             <Button
                               size="small"
@@ -288,6 +262,7 @@ export default function PortfolioDashboardMUI({ showTotals }: Props) {
                                 setConfirmOpen(true)
                               }}
                               startIcon={<DeleteIcon />}
+                              aria-label={`Excluir ${asset.ticker}`}
                               sx={{ ml: 1 }}
                             />
                           </TableCell>
@@ -301,7 +276,7 @@ export default function PortfolioDashboardMUI({ showTotals }: Props) {
           </Grid>
 
           {/* Portfolio Chart */}
-          <Grid item xs={12} lg={6}>
+          <Grid size={{ xs: 12, lg: 6 }}>
             <Card sx={{ bgcolor: 'background.paper', minWidth: '20rem' }}>
               <CardContent>
                 <Typography variant="h5" fontWeight="bold" gutterBottom>
@@ -321,7 +296,7 @@ export default function PortfolioDashboardMUI({ showTotals }: Props) {
                         cy="50%"
                       >
                         {filteredPortfolio.filter(p => p.value > 0).map((entry, i) => (
-                          <Cell key={i} fill={entry.color} />
+                          <Cell key={i} fill={entry.color ?? undefined} />
                         ))}
                       </Pie>
                     </PieChart>
@@ -363,7 +338,7 @@ export default function PortfolioDashboardMUI({ showTotals }: Props) {
                           }}
                         />
                         <Typography variant="body2" color="text.secondary">
-                          {item.name}
+                          {assetTypes[item.name] ?? item.name}
                         </Typography>
                       </Box>
                       <Typography variant="body2" color="text.secondary">
@@ -387,7 +362,7 @@ export default function PortfolioDashboardMUI({ showTotals }: Props) {
           assetTypes={assetTypes}
         />
 
-        <Dialog open={confirmOpen} onClose={() => { if (!loading) handleDelete() }}>
+        <Dialog open={confirmOpen} onClose={() => { if (!loading) setConfirmOpen(false) }}>
           <DialogTitle>Confirmar Exclusão</DialogTitle>
           <DialogContent>
             Você tem certeza que deseja excluir este ativo?

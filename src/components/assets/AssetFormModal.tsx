@@ -1,139 +1,76 @@
-"use client"
-
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react";
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Button,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Box,
-  Typography,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControl,
   InputAdornment,
-} from "@mui/material"
-import { Close as CloseIcon } from "@mui/icons-material"
+  InputLabel,
+  MenuItem,
+  Select,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { Close as CloseIcon } from "@mui/icons-material";
+import type { AssetParams } from "../../api";
+import type { Asset, AssetTypes } from "../../types";
+import { parseAmount } from "../../utils/formatter";
+import { EMPTY_ASSET_FORM as EMPTY_FORM, validateAsset, type AssetFormErrors as FormErrors, type AssetFormValues as FormValues } from "./assetForm";
 
-export default function AssetFormModal({ open, onClose, onSave, asset, mode, assetTypes }: AssetModalProps) {
-  const [formData, setFormData] = useState<Asset>({
-    id: "",
-    ticker: "",
-    asset_type: "",
-    description: "",
-    current_value: "",
-    rating: 1,
-    quantity: 0,
-    percentage: 0,
-    percent_by_type: 0,
-    color_code: "",
-  })
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  onSave: (asset: AssetParams) => void;
+  asset?: Asset | null;
+  mode: "create" | "edit";
+  /** enum key => label; a "Todos" filter entry is ignored */
+  assetTypes: AssetTypes;
+}
 
-  const [errors, setErrors] = useState<Partial<Asset>>({})
+export default function AssetFormModal({ open, onClose, onSave, asset, mode, assetTypes }: Props) {
+  const [formData, setFormData] = useState<FormValues>(EMPTY_FORM);
+  const [errors, setErrors] = useState<FormErrors>({});
 
   useEffect(() => {
-    if (asset && mode === "edit") {
-      setFormData({
-        id: asset.id,
-        ticker: asset.ticker,
-        asset_type: asset.asset_type,
-        description: asset.description,
-        current_value: asset.current_value,
-        rating: asset.rating,
-        quantity: asset.quantity,
-        percentage: asset.percentage,
-        percent_by_type: asset.percent_by_type,
-        color_code: asset.color_code,
-      })
-    } else {
-      setFormData({
-        id: "",
-        ticker: "",
-        asset_type: "",
-        description: "",
-        current_value: "",
-        rating: 1,
-        quantity: 0,
-        percentage: "0",
-        percent_by_type: 0,
-        color_code: "",
-      })
-    }
-    setErrors({})
-  }, [asset, mode, open])
+    setFormData(
+      asset && mode === "edit"
+        ? {
+            ticker: asset.ticker ?? "",
+            asset_type: asset.asset_type ?? "",
+            description: asset.description ?? "",
+            current_value: String(asset.current_value ?? ""),
+            rating: asset.rating,
+            quantity: asset.quantity,
+          }
+        : EMPTY_FORM
+    );
+    setErrors({});
+  }, [asset, mode, open]);
 
-  const handleInputChange = (field: keyof Asset, value: any) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }))
-
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors((prev) => ({
-        ...prev,
-        [field]: undefined,
-      }))
-    }
-  }
-
-  const handleCurrencyChange = (value: string) => {
-    handleInputChange("current_value", value)
-  }
-
-  const validateForm = () => {
-    const newErrors: Partial<Asset> = {}
-
-    if (!formData.asset_type) {
-      newErrors.asset_type = "Tipo de ativo é obrigatório"
-    }
-
-    if (!formData.description.trim()) {
-      newErrors.description = "Descrição é obrigatória"
-    }
-
-    if (!formData.current_value) {
-      newErrors.current_value = "Valor atual é obrigatório"
-    }
-
-    if (formData.rating < 1 || formData.rating > 10) {
-      newErrors.rating = "Nota deve ser entre 1 e 10"
-    }
-
-    if (formData.quantity <= 0) {
-      newErrors.quantity = "Quantidade deve ser maior que 0"
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+  const handleInputChange = <K extends keyof FormValues>(field: K, value: FormValues[K]) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
 
   const handleSave = () => {
-    if (validateForm()) {
-      onSave(formData)
-      onClose()
-    }
-  }
+    const newErrors = validateAsset(formData);
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
+
+    onSave({ ...formData, current_value: parseAmount(formData.current_value) });
+    onClose();
+  };
 
   const handleClose = () => {
-    setFormData({
-      id: "",
-      ticker: "",
-      asset_type: "",
-      description: "",
-      current_value: "",
-      rating: 1,
-      quantity: 0,
-      percentage: "0",
-      percent_by_type: 0,
-      color_code: "",
-    })
-    setErrors({})
-    onClose()
-  }
+    setFormData(EMPTY_FORM);
+    setErrors({});
+    onClose();
+  };
+
+  const typeOptions = Object.entries(assetTypes).filter(([key]) => key !== "Todos");
 
   return (
     <Dialog
@@ -141,42 +78,36 @@ export default function AssetFormModal({ open, onClose, onSave, asset, mode, ass
       onClose={handleClose}
       maxWidth="sm"
       fullWidth
-      PaperProps={{
-        sx: {
-          bgcolor: "background.paper",
-          color: "text.primary",
-        },
-      }}
+      PaperProps={{ sx: { bgcolor: "background.paper", color: "text.primary" } }}
     >
       <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Typography variant="h6">{mode === "create" ? "Adicionar Novo Ativo" : "Editar Ativo"}</Typography>
-        <Button onClick={handleClose} sx={{ minWidth: "auto", p: 1 }} color="inherit">
+        <Typography variant="h6" component="span">
+          {mode === "create" ? "Adicionar Novo Ativo" : "Editar Ativo"}
+        </Typography>
+        <Button onClick={handleClose} sx={{ minWidth: "auto", p: 1 }} color="inherit" aria-label="Fechar">
           <CloseIcon />
         </Button>
       </DialogTitle>
 
       <DialogContent>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 3, pt: 1 }}>
-          {/* Ticker */}
           <TextField
             label="Ticker"
             value={formData.ticker}
             onChange={(e) => handleInputChange("ticker", e.target.value)}
-            error={!!errors.ticker}
-            helperText={errors.ticker}
             fullWidth
             placeholder="Ex: AAPL, PETR4, BTC"
           />
 
-          {/* Asset Type */}
           <FormControl fullWidth error={!!errors.asset_type}>
-            <InputLabel>Tipo de Ativo</InputLabel>
+            <InputLabel id="asset-type-label">Tipo de Ativo</InputLabel>
             <Select
+              labelId="asset-type-label"
               value={formData.asset_type}
               onChange={(e) => handleInputChange("asset_type", e.target.value)}
               label="Tipo de Ativo"
             >
-              {Object.entries(assetTypes).map(([key, value]) => (
+              {typeOptions.map(([key, value]) => (
                 <MenuItem key={key} value={key}>
                   {value}
                 </MenuItem>
@@ -189,7 +120,6 @@ export default function AssetFormModal({ open, onClose, onSave, asset, mode, ass
             )}
           </FormControl>
 
-          {/* Description */}
           <TextField
             label="Descrição"
             value={formData.description}
@@ -202,21 +132,17 @@ export default function AssetFormModal({ open, onClose, onSave, asset, mode, ass
             placeholder="Descreva o ativo..."
           />
 
-          {/* Current Value */}
           <TextField
             label="Valor Atual"
             value={formData.current_value}
-            onChange={(e) => handleCurrencyChange(e.target.value)}
+            onChange={(e) => handleInputChange("current_value", e.target.value)}
             error={!!errors.current_value}
             helperText={errors.current_value}
             fullWidth
             placeholder="0,00"
-            InputProps={{
-              startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-            }}
+            InputProps={{ startAdornment: <InputAdornment position="start">R$</InputAdornment> }}
           />
 
-          {/* Rating */}
           <TextField
             label="Nota"
             type="number"
@@ -228,7 +154,6 @@ export default function AssetFormModal({ open, onClose, onSave, asset, mode, ass
             inputProps={{ min: 1, max: 10, step: 1 }}
           />
 
-          {/* Quantity */}
           <TextField
             label="Quantidade"
             type="number"
@@ -250,15 +175,11 @@ export default function AssetFormModal({ open, onClose, onSave, asset, mode, ass
         <Button
           onClick={handleSave}
           variant="contained"
-          sx={{
-            backgroundColor: "#eab308",
-            color: "#000000",
-            "&:hover": { backgroundColor: "#d97706" },
-          }}
+          sx={{ backgroundColor: "#eab308", color: "#000000", "&:hover": { backgroundColor: "#d97706" } }}
         >
           {mode === "create" ? "Adicionar" : "Salvar"}
         </Button>
       </DialogActions>
     </Dialog>
-  )
+  );
 }

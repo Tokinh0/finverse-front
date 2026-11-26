@@ -1,4 +1,3 @@
-// TradingViewWidget.tsx
 import React, { useEffect, useRef, memo } from "react";
 
 interface TradingViewWidgetProps {

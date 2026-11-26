@@ -1,41 +1,14 @@
-"use client";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { Alert, Button, Container, Form, Modal, Table } from "react-bootstrap";
+import { keywordsApi, subcategoriesApi } from "../api";
+import { Loading } from "../components/LoadingState";
+import type { Keyword, Subcategory } from "../types";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { apiUrl } from "../config";
+type FormState = { name: string; subcategory_id: string };
 
-type CategorySummary = {
-  id: number;
-  name: string;
-  color_code?: string | null;
-};
+const EMPTY_FORM: FormState = { name: "", subcategory_id: "" };
 
-type Subcategory = {
-  id: number;
-  name: string;
-  color_code?: string | null;
-  subcategory_type?: string | null;
-  category?: CategorySummary | null;
-};
-
-type Keyword = {
-  id: number;
-  name: string;
-  subcategory_id: number;
-  description?: string | null;
-  color_code?: string | null;
-  keyword_type?: string | null;
-  subcategory?: Subcategory | null;
-};
-
-type FormState = {
-  name: string;
-  subcategory_id: string;
-};
-
-const API_HEADERS = {
-  "Content-Type": "application/json",
-  Accept: "application/json",
-};
+const errorMessage = (err: unknown, fallback: string) => (err instanceof Error ? err.message : fallback);
 
 export default function KeywordsCrud() {
   const [keywords, setKeywords] = useState<Keyword[]>([]);
@@ -45,49 +18,20 @@ export default function KeywordsCrud() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingKeyword, setEditingKeyword] = useState<Keyword | null>(null);
-  const [formData, setFormData] = useState<FormState>({
-    name: "",
-    subcategory_id: "",
-  });
+  const [formData, setFormData] = useState<FormState>(EMPTY_FORM);
 
-  const subcategoryMap = useMemo(() => {
-    const map = new Map<number, Subcategory>();
-    subcategories.forEach((subcategory) => {
-      map.set(subcategory.id, subcategory);
-    });
-    return map;
-  }, [subcategories]);
-
-  const resetForm = () => {
-    setFormData({ name: "", subcategory_id: "" });
-    setEditingKeyword(null);
-  };
+  const subcategoryNames = useMemo(() => new Map(subcategories.map((s) => [s.id, s.name])), [subcategories]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [keywordsResponse, subcategoriesResponse] = await Promise.all([
-        fetch(`${apiUrl}/api/v1/keywords`, { headers: API_HEADERS }),
-        fetch(`${apiUrl}/api/v1/subcategories`, { headers: API_HEADERS }),
-      ]);
-
-      if (!keywordsResponse.ok) throw new Error("Failed to fetch keywords");
-      if (!subcategoriesResponse.ok)
-        throw new Error("Failed to fetch subcategories");
-
-      const [keywordsData, subcategoriesData] = await Promise.all([
-        keywordsResponse.json(),
-        subcategoriesResponse.json(),
-      ]);
-
+      const [keywordsData, subcategoriesData] = await Promise.all([keywordsApi.list(), subcategoriesApi.list()]);
       setKeywords(keywordsData);
       setSubcategories(subcategoriesData);
     } catch (err) {
       console.error(err);
-      setError(
-        err instanceof Error ? err.message : "Unexpected error loading data."
-      );
+      setError(errorMessage(err, "Unexpected error loading data."));
     } finally {
       setLoading(false);
     }
@@ -97,311 +41,168 @@ export default function KeywordsCrud() {
     loadData();
   }, [loadData]);
 
-  const handleAdd = () => {
-    resetForm();
+  const openDialog = (keyword: Keyword | null) => {
+    setEditingKeyword(keyword);
+    setFormData(keyword ? { name: keyword.name, subcategory_id: String(keyword.subcategory_id) } : EMPTY_FORM);
     setIsDialogOpen(true);
   };
 
-  const handleEdit = (keyword: Keyword) => {
-    setEditingKeyword(keyword);
-    setFormData({
-      name: keyword.name,
-      subcategory_id: keyword.subcategory_id.toString(),
-    });
-    setIsDialogOpen(true);
+  const closeDialog = () => {
+    if (isSubmitting) return;
+    setIsDialogOpen(false);
+    setEditingKeyword(null);
+    setFormData(EMPTY_FORM);
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this keyword?")) return;
+    if (!window.confirm("Are you sure you want to delete this keyword?")) return;
 
     try {
-      const response = await fetch(`${apiUrl}/api/v1/keywords/${id}`, {
-        method: "DELETE",
-        headers: API_HEADERS,
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete keyword");
-      }
-
+      await keywordsApi.remove(id);
       setKeywords((prev) => prev.filter((keyword) => keyword.id !== id));
     } catch (err) {
       console.error(err);
-      alert(
-        err instanceof Error
-          ? err.message
-          : "Unexpected error deleting keyword."
-      );
+      alert(errorMessage(err, "Unexpected error deleting keyword."));
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-
     if (!formData.name || !formData.subcategory_id) {
       alert("Please fill in all fields");
       return;
     }
 
-    const payload = {
-      keyword: {
-        name: formData.name,
-        subcategory_id: Number.parseInt(formData.subcategory_id, 10),
-      },
-    };
-
+    const params = { name: formData.name, subcategory_id: Number(formData.subcategory_id) };
     setIsSubmitting(true);
-
     try {
-      const url = editingKeyword
-        ? `${apiUrl}/api/v1/keywords/${editingKeyword.id}`
-        : `${apiUrl}/api/v1/keywords`;
-      const method = editingKeyword ? "PATCH" : "POST";
-
-      const response = await fetch(url, {
-        method,
-        headers: API_HEADERS,
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error(
-          editingKeyword
-            ? "Failed to update keyword"
-            : "Failed to create keyword"
-        );
-      }
-
-      const savedKeyword: Keyword = await response.json();
-
-      setKeywords((prev) =>
-        editingKeyword
-          ? prev.map((keyword) =>
-              keyword.id === savedKeyword.id ? savedKeyword : keyword
-            )
-          : [...prev, savedKeyword]
-      );
-
+      const saved = editingKeyword ? await keywordsApi.update(editingKeyword.id, params) : await keywordsApi.create(params);
+      setKeywords((prev) => (editingKeyword ? prev.map((k) => (k.id === saved.id ? saved : k)) : [...prev, saved]));
       setIsDialogOpen(false);
-      resetForm();
+      setEditingKeyword(null);
+      setFormData(EMPTY_FORM);
     } catch (err) {
       console.error(err);
-      alert(
-        err instanceof Error
-          ? err.message
-          : "Unexpected error submitting keyword."
-      );
+      alert(editingKeyword ? "Failed to update keyword" : "Failed to create keyword");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const getSubcategoryName = (keyword: Keyword) =>
-    keyword.subcategory?.name ??
-    subcategoryMap.get(keyword.subcategory_id)?.name ??
-    "Unknown";
+  const subcategoryName = (keyword: Keyword) =>
+    keyword.subcategory?.name ?? subcategoryNames.get(keyword.subcategory_id) ?? "Unknown";
 
-  if (loading) {
-    return (
-      <div className="max-w-6xl mx-auto p-4">
-        <p className="text-gray-600">Loading keywords...</p>
-      </div>
-    );
-  }
+  if (loading) return <Loading message="Loading keywords..." />;
 
   if (error) {
     return (
-      <div className="max-w-6xl mx-auto p-4 space-y-4">
-        <div className="rounded-md border border-red-200 bg-red-50 p-4 text-red-900">
-          <p className="font-medium">Unable to load keywords.</p>
-          <p className="text-sm text-red-700">{error}</p>
-        </div>
-        <button
-          onClick={loadData}
-          className="rounded-md border px-3 py-2 font-medium hover:bg-gray-50"
-          type="button"
-        >
+      <Container className="mt-4">
+        <Alert variant="danger">
+          <p className="fw-medium mb-1">Unable to load keywords.</p>
+          <p className="mb-0">{error}</p>
+        </Alert>
+        <Button variant="outline-secondary" onClick={loadData}>
           Try again
-        </button>
-      </div>
+        </Button>
+      </Container>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-4">
-      {/* Header / Actions */}
-      <div className="mb-4 flex items-center justify-between border rounded-lg p-4">
-        <h2 className="text-2xl font-bold">Keywords Management</h2>
-        <button
-          onClick={handleAdd}
-          className="inline-flex items-center gap-2 rounded-md border px-3 py-2 font-medium hover:bg-gray-50"
-          type="button"
-        >
+    <Container className="mt-4">
+      <div className="mb-4 d-flex align-items-center justify-content-between border rounded p-3">
+        <h2 className="mb-0">Keywords Management</h2>
+        <Button variant="outline-dark" onClick={() => openDialog(null)}>
           + Add Keyword
-        </button>
+        </Button>
       </div>
 
-      {/* Modal */}
-      {isDialogOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onMouseDown={(e) => {
-            // allow clicking outside to close
-            if (e.target === e.currentTarget && !isSubmitting) {
-              setIsDialogOpen(false);
-              resetForm();
-            }
-          }}
-        >
-          <div className="w-full max-w-lg rounded-lg bg-white shadow-lg">
-            <div className="border-b p-4">
-              <h3 className="text-lg font-semibold">
-                {editingKeyword ? "Edit Keyword" : "Add New Keyword"}
-              </h3>
-              <p className="text-sm text-gray-600">
-                {editingKeyword
-                  ? "Update the keyword details below."
-                  : "Fill in the details to create a new keyword."}
-              </p>
-            </div>
+      <Modal show={isDialogOpen} onHide={closeDialog} backdrop={isSubmitting ? "static" : true}>
+        <Form onSubmit={handleSubmit}>
+          <Modal.Header closeButton={!isSubmitting}>
+            <Modal.Title>{editingKeyword ? "Edit Keyword" : "Add New Keyword"}</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <p className="text-muted">
+              {editingKeyword ? "Update the keyword details below." : "Fill in the details to create a new keyword."}
+            </p>
+            <Form.Group className="mb-3" controlId="keyword-name">
+              <Form.Label>Keyword Name</Form.Label>
+              <Form.Control
+                placeholder="Enter keyword name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+                disabled={isSubmitting}
+              />
+            </Form.Group>
+            <Form.Group controlId="keyword-subcategory">
+              <Form.Label>Subcategory</Form.Label>
+              <Form.Select
+                value={formData.subcategory_id}
+                onChange={(e) => setFormData({ ...formData, subcategory_id: e.target.value })}
+                required
+                disabled={isSubmitting}
+              >
+                <option value="" disabled>
+                  Select a subcategory
+                </option>
+                {subcategories.map((subcategory) => (
+                  <option key={subcategory.id} value={subcategory.id}>
+                    {subcategory.name}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="outline-secondary" onClick={closeDialog} disabled={isSubmitting}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="dark" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : editingKeyword ? "Update Keyword" : "Add Keyword"}
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
 
-            <form onSubmit={handleSubmit}>
-              <div className="p-4 space-y-4">
-                <div className="space-y-1">
-                  <label htmlFor="name" className="text-sm font-medium">
-                    Keyword Name
-                  </label>
-                  <input
-                    id="name"
-                    placeholder="Enter keyword name"
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    required
-                    className="w-full rounded-md border px-3 py-2"
-                    type="text"
-                    disabled={isSubmitting}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label htmlFor="subcategory" className="text-sm font-medium">
-                    Subcategory
-                  </label>
-                  <select
-                    id="subcategory"
-                    value={formData.subcategory_id}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        subcategory_id: e.target.value,
-                      })
-                    }
-                    required
-                    className="w-full rounded-md border px-3 py-2 bg-black"
-                    disabled={isSubmitting}
-                  >
-                    <option value="" disabled>
-                      Select a subcategory
-                    </option>
-                    {subcategories.map((subcategory) => (
-                      <option key={subcategory.id} value={subcategory.id}>
-                        {subcategory.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 p-4 border-t">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isSubmitting) return;
-                    setIsDialogOpen(false);
-                    resetForm();
-                  }}
-                  className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-md bg-black px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-70"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting
-                    ? "Saving..."
-                    : editingKeyword
-                    ? "Update Keyword"
-                    : "Add Keyword"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Table */}
-      <div className="overflow-x-auto border rounded-lg">
-        <table className="min-w-full border-collapse">
-          <thead className="bg-gray-50">
+      <Table bordered hover responsive>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Subcategory</th>
+            <th className="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {keywords.length === 0 ? (
             <tr>
-              <th className="text-left text-sm font-semibold p-3 border-b">ID</th>
-              <th className="text-left text-sm font-semibold p-3 border-b">
-                Name
-              </th>
-              <th className="text-left text-sm font-semibold p-3 border-b">
-                Subcategory
-              </th>
-              <th className="text-right text-sm font-semibold p-3 border-b">
-                Actions
-              </th>
+              <td colSpan={4} className="text-center text-muted">
+                No keywords found. Add one to get started.
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {keywords.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="p-4 text-center text-gray-500">
-                  No keywords found. Add one to get started.
+          ) : (
+            keywords.map((keyword) => (
+              <tr key={keyword.id}>
+                <td className="fw-medium">{keyword.id}</td>
+                <td>{keyword.name}</td>
+                <td>{subcategoryName(keyword)}</td>
+                <td>
+                  <div className="d-flex justify-content-end gap-2">
+                    <Button size="sm" variant="outline-secondary" onClick={() => openDialog(keyword)}>
+                      Edit
+                    </Button>
+                    <Button size="sm" variant="outline-danger" onClick={() => handleDelete(keyword.id)}>
+                      Delete
+                    </Button>
+                  </div>
                 </td>
               </tr>
-            ) : (
-              keywords.map((keyword) => (
-                <tr key={keyword.id} className="hover:bg-gray-50">
-                  <td className="p-3 border-b font-medium">{keyword.id}</td>
-                  <td className="p-3 border-b">{keyword.name}</td>
-                  <td className="p-3 border-b">
-                    {getSubcategoryName(keyword)}
-                  </td>
-                  <td className="p-3 border-b">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => handleEdit(keyword)}
-                        className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50"
-                        type="button"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(keyword.id)}
-                        className="rounded-md border px-3 py-1.5 text-sm text-red-600 hover:bg-red-50"
-                        type="button"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+            ))
+          )}
+        </tbody>
+      </Table>
+    </Container>
   );
 }

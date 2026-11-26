@@ -1,172 +1,95 @@
-import { useState, useEffect } from "react";
-import { apiUrl } from "../config";
+import { useEffect, useState } from "react";
+import { categoriesApi, subcategoriesApi } from "../api";
+import type { Category, Subcategory } from "../types";
 
-interface Subcategory {
-  id: number;
-  name: string;
-  color_code: string;
-  subcategory_type: string;
-}
+// Rows added in the UI get a negative temporary id until the API returns the real one.
+let nextTempId = -1;
+const isNew = (record: { id: number }) => record.id < 0;
 
-interface Category {
-  id: number;
-  name: string;
-  color_code: string;
-  subcategories: Subcategory[];
-}
+const SUBCATEGORY_TYPES = [
+  ["gain", "Gain"],
+  ["expense", "Expense"],
+  ["investment", "Investment"],
+  ["transfer", "Transfer"],
+  ["other", "Other"],
+] as const;
 
 export default function CategorySubcategoryManager() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchCategories();
+    categoriesApi
+      .list()
+      .then(setCategories)
+      .catch((error) => console.error("Error fetching categories:", error))
+      .finally(() => setLoading(false));
   }, []);
 
-  const apiHeaders = {
-    "Content-Type": "application/json",
-    Accept: "application/json",
+  const updateCategory = (categoryId: number, changes: Partial<Category>) => {
+    setCategories((prev) => prev.map((cat) => (cat.id === categoryId ? { ...cat, ...changes } : cat)));
   };
 
-  const fetchCategories = async () => {
-    try {
-      const response = await fetch(`${apiUrl}/api/v1/categories`, {
-        headers: apiHeaders,
-      });      
-      if (!response.ok) throw new Error("Failed to fetch categories");
-      const data = await response.json();
-      setCategories(data);
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updateCategory = (categoryId: number, field: keyof Category, value: string) => {
-    setCategories((prev) =>
-      prev.map((cat) =>
-        cat.id === categoryId ? { ...cat, [field]: value } : cat
-      )
-    );
-  };
-
-  const updateSubcategory = (
-    categoryId: number,
-    subcategoryId: number,
-    field: keyof Subcategory,
-    value: string
-  ) => {
+  const updateSubcategory = (categoryId: number, subcategoryId: number, changes: Partial<Subcategory>) => {
     setCategories((prev) =>
       prev.map((cat) =>
         cat.id === categoryId
-          ? {
-              ...cat,
-              subcategories: cat.subcategories.map((sub) =>
-                sub.id === subcategoryId ? { ...sub, [field]: value } : sub
-              ),
-            }
+          ? { ...cat, subcategories: cat.subcategories.map((sub) => (sub.id === subcategoryId ? { ...sub, ...changes } : sub)) }
           : cat
       )
     );
   };
 
   const addCategory = () => {
-    const newCategory: Category = {
-      id: `temp-${Date.now()}` as unknown as number,
-      name: "",
-      color_code: "#000000",
-      subcategories: [],
-    };
-    setCategories((prev) => [...prev, newCategory]);
+    setCategories((prev) => [...prev, { id: nextTempId--, name: "", color_code: "#000000", subcategories: [] }]);
   };
-  
+
   const addSubcategory = (categoryId: number) => {
-    const newSubcategory: Subcategory = {
-      id: `temp-${Date.now()}` as unknown as number,
-      name: "",
-      color_code: "#cccccc",
-      subcategory_type: "",
-    };
-  
+    const subcategory: Subcategory = { id: nextTempId--, name: "", color_code: "#cccccc", subcategory_type: "" };
     setCategories((prev) =>
-      prev.map((cat) =>
-        cat.id === categoryId
-          ? {
-              ...cat,
-              subcategories: [...cat.subcategories, newSubcategory],
-            }
-          : cat
-      )
+      prev.map((cat) => (cat.id === categoryId ? { ...cat, subcategories: [...cat.subcategories, subcategory] } : cat))
     );
-  };  
+  };
 
   const saveCategory = async (category: Category) => {
-    const method = category.id.toString().startsWith("temp") ? "POST" : "PATCH";
-    const url =
-      method === "POST"
-        ? `${apiUrl}/api/v1/categories`
-        : `${apiUrl}/api/v1/categories/${category.id}`;
-  
-    const response = await fetch(url, {
-      method,
-      headers: apiHeaders,
-      body: JSON.stringify({
-        category: {
-          name: category.name,
-          color_code: category.color_code,
-        },
-      }),
-    });
-  
-    const data = await response.json();
-    if (method === "POST") {
-      setCategories((prev) =>
-        prev.map((cat) =>
-          cat.id === category.id ? { ...data } : cat
-        )
-      );
+    const params = { name: category.name, color_code: category.color_code };
+    try {
+      if (isNew(category)) {
+        const saved = await categoriesApi.create(params);
+        setCategories((prev) => prev.map((cat) => (cat.id === category.id ? saved : cat)));
+      } else {
+        await categoriesApi.update(category.id, params);
+      }
+    } catch (error) {
+      console.error("Error saving category:", error);
     }
   };
-  
+
   const saveSubcategory = async (subcategory: Subcategory, categoryId: number) => {
-    const method = subcategory.id.toString().startsWith("temp") ? "POST" : "PATCH";
-    const url =
-      method === "POST"
-        ? `${apiUrl}/api/v1/subcategories`
-        : `${apiUrl}/api/v1/subcategories/${subcategory.id}`;
-  
-    const response = await fetch(url, {
-      method,
-      headers: apiHeaders,
-      body: JSON.stringify({
-        subcategory: {
-          name: subcategory.name,
-          color_code: subcategory.color_code,
-          subcategory_type: subcategory.subcategory_type,
-          category_id: categoryId,
-        },
-      }),
-    });
-  
-    const data = await response.json();
-  
-    if (method === "POST") {
-      setCategories((prev) =>
-        prev.map((cat) =>
-          cat.id === categoryId
-            ? {
-                ...cat,
-                subcategories: cat.subcategories.map((sub) =>
-                  sub.id === subcategory.id ? { ...data } : sub
-                ),
-              }
-            : cat
-        )
-      );
+    const params = {
+      name: subcategory.name,
+      color_code: subcategory.color_code,
+      subcategory_type: subcategory.subcategory_type,
+      category_id: categoryId,
+    };
+    try {
+      if (isNew(subcategory)) {
+        const saved = await subcategoriesApi.create(params);
+        setCategories((prev) =>
+          prev.map((cat) =>
+            cat.id === categoryId
+              ? { ...cat, subcategories: cat.subcategories.map((sub) => (sub.id === subcategory.id ? saved : sub)) }
+              : cat
+          )
+        );
+      } else {
+        await subcategoriesApi.update(subcategory.id, params);
+      }
+    } catch (error) {
+      console.error("Error saving subcategory:", error);
     }
   };
-  
+
   if (loading) return <p>Loading...</p>;
 
   return (
@@ -177,20 +100,22 @@ export default function CategorySubcategoryManager() {
           <div className="mb-3">
             <div className="d-flex align-items-center gap-2 mb-1">
               <input
+                aria-label="Category name"
                 className="form-control form-control-sm w-50"
                 type="text"
-                value={category.name ?? ''}
-                onChange={(e) => updateCategory(category.id, "name", e.target.value)}
+                value={category.name ?? ""}
+                onChange={(e) => updateCategory(category.id, { name: e.target.value })}
                 onBlur={() => saveCategory(category)}
               />
               <input
+                aria-label="Category color"
                 className="form-control form-control-color"
                 type="color"
-                value={category.color_code ?? '#000000'}
-                onChange={(e) => updateCategory(category.id, "color_code", e.target.value)}
+                value={category.color_code ?? "#000000"}
+                onChange={(e) => updateCategory(category.id, { color_code: e.target.value })}
                 onBlur={() => saveCategory(category)}
               />
-              <button className="btn btn-outline-primary btn-sm" onClick={() => addSubcategory(category.id)}>
+              <button className="btn btn-outline-primary btn-sm" onClick={() => addSubcategory(category.id)} disabled={isNew(category)}>
                 + Subcategory
               </button>
             </div>
@@ -198,36 +123,38 @@ export default function CategorySubcategoryManager() {
             {category.subcategories.map((sub) => (
               <div key={sub.id} className="ms-4 d-flex align-items-center gap-2 mb-1">
                 <input
+                  aria-label="Subcategory name"
                   className="form-control form-control-sm w-50"
                   type="text"
-                  value={sub.name ?? ''}
-                  onChange={(e) =>
-                    updateSubcategory(category.id, sub.id, "name", e.target.value)
-                  }
+                  value={sub.name ?? ""}
+                  onChange={(e) => updateSubcategory(category.id, sub.id, { name: e.target.value })}
                   onBlur={() => saveSubcategory(sub, category.id)}
                 />
                 <input
+                  aria-label="Subcategory color"
                   className="form-control form-control-color"
                   type="color"
-                  value={sub.color_code ?? '#cccccc'}
-                  onChange={(e) =>
-                    updateSubcategory(category.id, sub.id, "color_code", e.target.value)
-                  }
+                  value={sub.color_code ?? "#cccccc"}
+                  onChange={(e) => updateSubcategory(category.id, sub.id, { color_code: e.target.value })}
                   onBlur={() => saveSubcategory(sub, category.id)}
                 />
                 <select
+                  aria-label="Subcategory type"
                   className="form-select form-select-sm w-auto"
-                  value={sub.subcategory_type ?? "Unselected"}
+                  value={sub.subcategory_type ?? ""}
                   onChange={(e) =>
-                    updateSubcategory(category.id, sub.id, "subcategory_type", e.target.value)
+                    updateSubcategory(category.id, sub.id, { subcategory_type: e.target.value as Subcategory["subcategory_type"] })
                   }
                   onBlur={() => saveSubcategory(sub, category.id)}
                 >
-                  <option value="gain">Gain</option>
-                  <option value="expense">Expense</option>
-                  <option value="investment">Investment</option>
-                  <option value="transfer">Transfer</option>
-                  <option value="other">Other</option>
+                  <option value="" disabled>
+                    Select a type
+                  </option>
+                  {SUBCATEGORY_TYPES.map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
                 </select>
               </div>
             ))}

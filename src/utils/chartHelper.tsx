@@ -1,61 +1,35 @@
-import React from "react";
-
-const usedLabelPositions: { x: number; y: number }[] = [];
-
-function isTooClose(x1: number, y1: number, x2: number, y2: number, threshold: number) {
-  return Math.hypot(x1 - x2, y1 - y2) < threshold;
-}
-
-function getNonOverlappingXY(x: number, y: number, threshold = 14): { x: number; y: number } {
-  const MAX_ATTEMPTS = 100;
-  let attempts = 0;
-  let offset = 0;
-
-  while (
-    usedLabelPositions.some(p => isTooClose(p.x, p.y, x, y, threshold)) &&
-    attempts < MAX_ATTEMPTS
-  ) {
-    offset += threshold;
-    const angle = (attempts % 2 === 0 ? 1 : -1) * Math.PI / 6; // Alternate ±30°
-    x += offset * Math.cos(angle);
-    y += offset * Math.sin(angle);
-    attempts++;
-  }
-
-  usedLabelPositions.push({ x, y });
-  return { x, y };
-}
-
+// Recharts types every label prop as optional.
 interface CustomPieLabelProps {
-  cx: number;
-  cy: number;
-  midAngle: number;
-  outerRadius: number;
-  percent: number;
-  name: string;
+  cx?: number;
+  cy?: number;
+  midAngle?: number;
+  outerRadius?: number;
+  percent?: number;
+  name?: string;
   fill?: string;
   fontSize?: number;
-  index?: number; // ← pass this to help offset per slice
+  /** Slice index, used to stagger label distance so neighbouring labels overlap less. */
+  index?: number;
 }
 
+/** Pie slice label rendered outside the slice as "name (NN%)"; slices under 0.5% get no label. */
 export const renderCustomPieLabel = ({
-  cx,
-  cy,
-  midAngle,
-  outerRadius,
-  percent,
+  cx = 0,
+  cy = 0,
+  midAngle = 0,
+  outerRadius = 0,
+  percent = 0,
   name,
   fill = "#333",
   fontSize = 14,
   index = 0,
 }: CustomPieLabelProps) => {
-  if (percent < 0.005) return null; // too small to label clearly
+  if (percent < 0.005) return null;
 
   const RADIAN = Math.PI / 180;
-  const baseRadius = outerRadius + 20 + (index % 3) * 8; // spread by index
-
-  const x = cx + baseRadius * Math.cos(-midAngle * RADIAN);
-  const y = cy + baseRadius * Math.sin(-midAngle * RADIAN);
+  const radius = outerRadius + 20 + (index % 3) * 8;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
   return (
     <text
@@ -63,7 +37,7 @@ export const renderCustomPieLabel = ({
       y={y}
       fill={fill}
       fontSize={fontSize}
-      fontWeight={"bold"}
+      fontWeight="bold"
       textAnchor={x > cx ? "start" : "end"}
       dominantBaseline="central"
     >

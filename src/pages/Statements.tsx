@@ -1,75 +1,45 @@
-import { useState, useEffect, ChangeEvent } from "react";
-import {
-  Container,
-  Row,
-  Col,
-  Table,
-  Button,
-  Form,
-  Spinner,
-} from "react-bootstrap";
-import {
-  MonthlyStatementPresenter,
-  RawMonthlyStatement,
-} from "../presenters/MonthlyStatementPresenter";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
+import { Button, Col, Container, Form, Row, Spinner, Table } from "react-bootstrap";
+import { statementsApi } from "../api";
 import UploadSummaryModal from "../components/UploadSummaryModal";
-import { SummaryLinePresenter, RawSummaryLine } from "../presenters/SummaryLinePresenter";
+import { MonthlyStatementPresenter } from "../presenters/MonthlyStatementPresenter";
+import { SummaryLinePresenter } from "../presenters/SummaryLinePresenter";
 
+const byFirstTransactionDate = (a: MonthlyStatementPresenter, b: MonthlyStatementPresenter) =>
+  new Date(a.firstTransactionDate).getTime() - new Date(b.firstTransactionDate).getTime() || a.id - b.id;
 
 export default function Statements() {
   const [files, setFiles] = useState<MonthlyStatementPresenter[]>([]);
   const [newFile, setNewFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
   const [summaryLines, setSummaryLines] = useState<SummaryLinePresenter[]>([]);
   const [showSummary, setShowSummary] = useState(false);
-  
+  const fileInput = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
-    fetchFiles();
+    setLoading(true);
+    statementsApi
+      .list()
+      .then((data) => setFiles(MonthlyStatementPresenter.parseMany(data)))
+      .catch((error) => console.error("Error fetching files:", error))
+      .finally(() => setLoading(false));
   }, []);
 
-  const fetchFiles = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch("http://localhost:3000/api/v1/monthly_statements");
-      if (!response.ok) throw new Error("Failed to fetch files");
-
-      const data: RawMonthlyStatement[] = await response.json();
-      setFiles(MonthlyStatementPresenter.parseMany(data));
-    } catch (error) {
-      console.error("Error fetching files:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setNewFile(e.target.files[0]);
-    }
+    setNewFile(e.target.files?.[0] ?? null);
   };
 
   const handleUpload = async () => {
     if (!newFile) return;
 
-    const formData = new FormData();
-    formData.append("monthly_statement[file]", newFile);
-
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:3000/api/v1/monthly_statements", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error("Upload failed");
-
-      const uploaded = await response.json();
-      const parsed = new MonthlyStatementPresenter(uploaded.statement);
-      setFiles((prev) => [...prev, parsed]);
+      const uploaded = await statementsApi.upload(newFile);
+      setFiles((prev) => [...prev, new MonthlyStatementPresenter(uploaded.statement)]);
       setSummaryLines(SummaryLinePresenter.parseMany(uploaded.summary_lines));
-      setShowSummary(true);      
+      setShowSummary(true);
       setNewFile(null);
-      (document.getElementById("statement-input") as HTMLInputElement).value = "";
+      if (fileInput.current) fileInput.current.value = "";
     } catch (error) {
       console.error("Upload error:", error);
       alert("Failed to upload file.");
@@ -79,17 +49,11 @@ export default function Statements() {
   };
 
   const handleDelete = async (id: number) => {
-    const confirmed = window.confirm("Are you sure you want to delete this file?");
-    if (!confirmed) return;
+    if (!window.confirm("Are you sure you want to delete this file?")) return;
 
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:3000/api/v1/monthly_statements/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) throw new Error("Delete failed");
-
+      await statementsApi.remove(id);
       setFiles((prev) => prev.filter((f) => f.id !== id));
     } catch (error) {
       console.error("Delete error:", error);
@@ -102,12 +66,15 @@ export default function Statements() {
   return (
     <Container>
       <Row className="align-items-center mb-4">
-        <Col><h2>Uploaded Statements</h2></Col>
+        <Col>
+          <h2>Uploaded Statements</h2>
+        </Col>
         <Col md="auto">
-          <Form inline="true">
+          <Form onSubmit={(e) => e.preventDefault()}>
             <Form.Group controlId="statement-input" className="d-flex gap-2">
-              <Form.Control type="file" accept=".csv,.pdf" onChange={handleFileChange} />
-              <Button variant="dark" onClick={handleUpload} disabled={loading}>
+              <Form.Label visuallyHidden>Statement file</Form.Label>
+              <Form.Control ref={fileInput} type="file" accept=".csv,.pdf" onChange={handleFileChange} />
+              <Button variant="dark" onClick={handleUpload} disabled={loading || !newFile}>
                 {loading ? "Uploading..." : "Upload"}
               </Button>
             </Form.Group>
@@ -129,17 +96,11 @@ export default function Statements() {
               <th>Uploaded At</th>
               <th>First Transaction Date</th>
               <th>Last Transaction Date</th>
-              <th style={{ width: "200px" }}>Actions</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-          {[...files]
-            .sort((a, b) => {
-              const dateA = new Date(a.firstTransactionDate || "1970-01-01").getTime();
-              const dateB = new Date(b.firstTransactionDate || "1970-01-01").getTime();
-              return dateA - dateB;
-            })
-            .map((file) => (
+            {[...files].sort(byFirstTransactionDate).map((file) => (
               <tr key={file.id}>
                 <td>{file.filename}</td>
                 <td>{file.status}</td>
@@ -147,20 +108,16 @@ export default function Statements() {
                 <td>{file.firstTransactionDate}</td>
                 <td>{file.lastTransactionDate}</td>
                 <td>
-                  <Button variant="primary" size="sm" className="me-2">View</Button>
-                  <Button variant="warning" size="sm" className="me-2">Edit</Button>
-                  <Button variant="danger" size="sm" onClick={() => handleDelete(file.id)}>Delete</Button>
+                  <Button variant="danger" size="sm" onClick={() => handleDelete(file.id)}>
+                    Delete
+                  </Button>
                 </td>
               </tr>
-          ))}
+            ))}
           </tbody>
         </Table>
       )}
-      <UploadSummaryModal
-        show={showSummary}
-        onHide={() => setShowSummary(false)}
-        lines={summaryLines}
-      />
+      <UploadSummaryModal show={showSummary} onHide={() => setShowSummary(false)} lines={summaryLines} />
     </Container>
   );
 }

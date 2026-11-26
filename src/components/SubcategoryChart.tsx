@@ -1,162 +1,111 @@
-import { useState } from "react";
-import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
+import { useId, useState } from "react";
+import { Bar, BarChart, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import type { SubcategoryReportEntry } from "../types";
 import { renderCustomPieLabel } from "../utils/chartHelper";
-
-const COLORS = [
-  "#0088FE", "#00C49F", "#FFBB28", "#FF8042",
-  "#AA336A", "#33AADD", "#FF6666", "#66CC66"
-];
+import { colorAt, formatBRL } from "../utils/colors";
+import ChartTypeSelect, { type ChartType } from "./ChartTypeSelect";
 
 interface Props {
-  data: SubcategoryData[];
-  showTotals: boolean
+  data: SubcategoryReportEntry[];
+  showTotals: boolean;
 }
 
-const CustomTooltip = ({ active, payload, showTotals }: any) => {
-  if (active && payload && payload.length > 0) {
-    const data = payload[0].payload;
-    const percent = payload[0].percent;
-    return (
-      <div
-        style={{
-          backgroundColor: "rgba(255, 255, 255, 1)",
-          border: "1px solid #ccc",
-          padding: "10px",
-          textAlign: "left",
-          width: "340px",
-          height: "260px",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-          boxSizing: "border-box",
-        }}
-      >
-        <p style={{ margin: "0 0 4px 0" }}>
-          <strong>
-            {data.name}
-            {typeof percent === "number" ? ` (${(percent * 100).toFixed(1)}%)` : ""}
-          </strong>
-        </p>
-        {showTotals && (
-          <p style={{ margin: "0 0 8px 0" }}>
-            <strong>R$ {data.total.toFixed(2)} - Total</strong>
-          </p>
-        )}
-        <ul
-          style={{
-            margin: 0,
-            paddingLeft: 0,
-            listStyle: "none",
-            overflowY: "auto",
-            flex: 1,
-            minHeight: 0,
-          }}
-        >
-          {[...data.transactions]
-            .sort((a, b) => new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime())
-            .map((t: any, idx: number) => (
-              <li
-                key={idx}
-                style={{
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  color: t.amount > 100 ? (t.amount > 300 ? "red" : 'brown') : "black",
-                }}
-              >
-                {t.transaction_date} - R$ {showTotals ? t.amount.toFixed(2) : '-'} - {t.name.replace(/\s+/g, " ").trim()}
-              </li>
-            ))}
-        </ul>
-      </div>
-    );
-  }
+interface TooltipProps {
+  active?: boolean;
+  payload?: { payload: SubcategoryReportEntry; percent?: number }[];
+  showTotals: boolean;
+}
 
-  return null;
+/** Color transaction lines by size: > R$300 red, > R$100 brown. */
+const amountColor = (amount: number) => (amount > 300 ? "red" : amount > 100 ? "brown" : "black");
+
+// "dd/mm/yyyy" (as sent by the API) -> sortable timestamp
+const parseBrDate = (date: string) => {
+  const [day, month, year] = date.split("/").map(Number);
+  return new Date(year, month - 1, day).getTime();
 };
 
+export function SubcategoryTooltip({ active, payload, showTotals }: TooltipProps) {
+  if (!active || !payload?.length) return null;
+
+  const data = payload[0].payload;
+  const percent = payload[0].percent;
+  const transactions = [...data.transactions].sort((a, b) => parseBrDate(a.transaction_date) - parseBrDate(b.transaction_date));
+
+  return (
+    <div
+      style={{
+        backgroundColor: "#fff",
+        border: "1px solid #ccc",
+        padding: "10px",
+        textAlign: "left",
+        width: "340px",
+        height: "260px",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        boxSizing: "border-box",
+      }}
+    >
+      <p style={{ margin: "0 0 4px 0" }}>
+        <strong>
+          {data.name}
+          {typeof percent === "number" ? ` (${(percent * 100).toFixed(1)}%)` : ""}
+        </strong>
+      </p>
+      {showTotals && (
+        <p style={{ margin: "0 0 8px 0" }}>
+          <strong>R$ {data.total.toFixed(2)} - Total</strong>
+        </p>
+      )}
+      <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none", overflowY: "auto", flex: 1, minHeight: 0 }}>
+        {transactions.map((t, idx) => (
+          <li
+            key={idx}
+            style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: amountColor(t.amount) }}
+          >
+            {t.transaction_date} - R$ {showTotals ? t.amount.toFixed(2) : "-"} - {t.name.replace(/\s+/g, " ").trim()}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 export default function SubcategoryChart({ data, showTotals }: Props) {
-  const [chartType, setChartType] = useState<"bar" | "line" | "pie">("pie");
+  const [chartType, setChartType] = useState<ChartType>("pie");
+  const selectId = useId();
 
   if (!Array.isArray(data)) return <p>Invalid data</p>;
 
-  const chartData: SubcategoryData[] = data.map((entry) => ({
-    ...entry,
-    total: typeof entry.total === "string" ? parseFloat(entry.total) : entry.total,
-  }));
-
-  if (!chartData.length) return <p style={{ marginTop: '50%' }}>No data to display.</p>;
+  const chartData = data.map((entry) => ({ ...entry, total: Number(entry.total) }));
+  if (!chartData.length) return <p style={{ marginTop: "50%" }}>No data to display.</p>;
 
   return (
     <div>
-      <div style={{ marginBottom: "1rem" }}>
-        <label htmlFor="chartType" style={{ marginRight: "0.5rem" }}>
-          Choose chart type:
-        </label>
-        <select
-          id="chartType"
-          value={chartType}
-          onChange={(e) => setChartType(e.target.value as "bar" | "line" | "pie")}
-        >
-          <option value="bar">Bar</option>
-          <option value="line">Line</option>
-          <option value="pie">Pie</option>
-        </select>
-      </div>
+      <ChartTypeSelect id={selectId} value={chartType} onChange={setChartType} />
 
       <div style={{ width: "100%", height: 550 }}>
-        {chartType === "bar" && (
-          <ResponsiveContainer>
+        <ResponsiveContainer>
+          {chartType === "bar" ? (
             <BarChart data={chartData}>
               <XAxis dataKey="name" angle={-30} textAnchor="end" interval={0} height={100} />
               <YAxis />
-              <Tooltip formatter={(value) => {
-                if (typeof value === "number") {
-                  return `R$ ${value.toFixed(2)}`;
-                }
-                return `R$ ${value}`;
-              }} />
+              <Tooltip formatter={formatBRL} />
               <Legend />
               <Bar dataKey="total" fill="#8884d8" />
             </BarChart>
-          </ResponsiveContainer>
-        )}
-
-        {chartType === "line" && (
-          <ResponsiveContainer>
+          ) : chartType === "line" ? (
             <LineChart data={chartData}>
               <XAxis dataKey="name" angle={-30} textAnchor="end" interval={0} height={100} />
               <YAxis />
-              <Tooltip formatter={(value) => {
-                if (typeof value === "number") {
-                  return `R$ ${value.toFixed(2)}`;
-                }
-                return `R$ ${value}`;
-              }} />
+              <Tooltip formatter={formatBRL} />
               <Legend />
               <Line type="monotone" dataKey="total" stroke="#82ca9d" />
             </LineChart>
-          </ResponsiveContainer>
-        )}
-        
-        {chartType === "pie" && (
-          <ResponsiveContainer>
+          ) : (
             <PieChart>
-            <Tooltip content={<CustomTooltip/>} showTotals={showTotals} />
+              <Tooltip content={<SubcategoryTooltip showTotals={showTotals} />} />
               <Pie
                 data={chartData}
                 dataKey="total"
@@ -165,25 +114,16 @@ export default function SubcategoryChart({ data, showTotals }: Props) {
                 cy="50%"
                 outerRadius={100}
                 label={({ cx, cy, midAngle, outerRadius, percent, name, payload, index }) =>
-                  renderCustomPieLabel({
-                    cx,
-                    cy,
-                    midAngle,
-                    outerRadius,
-                    percent,
-                    name,
-                    fill: payload.fill,
-                    index, // ← pass index here
-                  })
+                  renderCustomPieLabel({ cx, cy, midAngle, outerRadius, percent, name, fill: payload.fill, index })
                 }
               >
                 {chartData.map((entry, i) => (
-                  <Cell key={`cell-${i}`} fill={entry.color_code || COLORS[i % COLORS.length]} />
+                  <Cell key={entry.name} fill={colorAt(i, entry.color_code)} />
                 ))}
               </Pie>
             </PieChart>
-          </ResponsiveContainer>
-        )}
+          )}
+        </ResponsiveContainer>
       </div>
     </div>
   );

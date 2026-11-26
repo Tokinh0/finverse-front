@@ -14,6 +14,18 @@ export interface RawSummaryLine {
   };
 }
 
+// The API stores the raw statement row as a JSON-encoded array string.
+function parseContent(content: RawSummaryLine["content"]): string[] {
+  if (Array.isArray(content)) return content.map(String);
+  try {
+    const parsed = JSON.parse(content);
+    if (Array.isArray(parsed)) return parsed.map((part) => (part == null ? "" : String(part)));
+  } catch {
+    // not JSON: fall through
+  }
+  return String(content ?? "").split(",");
+}
+
 export class SummaryLinePresenter {
   id: number;
   status: string;
@@ -31,9 +43,7 @@ export class SummaryLinePresenter {
     this.id = raw.id;
     this.status = raw.status;
     this.error = raw.error;
-    this.content = Array.isArray(raw.content)
-      ? raw.content
-      : String(raw.content).split(",");
+    this.content = parseContent(raw.content);
 
     this.name = raw.parsed_transaction?.name ?? undefined;
     this.parsedName = raw.parsed_transaction?.parsed_name ?? undefined;
