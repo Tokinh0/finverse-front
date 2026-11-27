@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { Route, Routes } from "react-router-dom";
 import AppNavbar from "./components/Navbar";
+import { SuggestionsSummaryContext, useSuggestionsSummaryState } from "./hooks/suggestionsSummary";
 import ChargeAlerts from "./pages/ChargeAlerts";
 import CategorySubcategoryManager from "./pages/CategorySubcategoryManager";
 import Dashboard from "./pages/Dashboard";
 import KeywordsCrud from "./pages/KeywordsCrud";
 import PortfolioDashboard from "./pages/PortfolioDashboard";
+import Settings from "./pages/Settings";
 import Statements from "./pages/Statements";
+import Suggestions from "./pages/Suggestions";
 import Transactions from "./pages/Transactions";
 import FinancialHealth from "./pages/reports/FinancialHealth";
 import MonthlyByCategory from "./pages/reports/MonthlyByCategory";
@@ -15,9 +18,10 @@ import MonthlyBySubcategory from "./pages/reports/MonthlyBySubcategory";
 export default function App() {
   // Global privacy toggle: when false, amounts are hidden on reports and the portfolio.
   const [showTotals, setShowTotals] = useState(false);
+  const suggestions = useSuggestionsSummaryState();
 
   return (
-    <div>
+    <SuggestionsSummaryContext.Provider value={suggestions}>
       <AppNavbar showTotals={showTotals} setShowTotals={setShowTotals} />
       <br />
       <br />
@@ -32,7 +36,9 @@ export default function App() {
         <Route path="/reports/monthly-by-category" element={<MonthlyByCategory />} />
         <Route path="/reports/monthly-by-subcategory" element={<MonthlyBySubcategory showTotals={showTotals} />} />
         <Route path="/assets" element={<PortfolioDashboard showTotals={showTotals} />} />
+        <Route path="/suggestions" element={<Suggestions showTotals={showTotals} />} />
+        <Route path="/settings" element={<Settings />} />
       </Routes>
-    </div>
+    </SuggestionsSummaryContext.Provider>
   );
 }

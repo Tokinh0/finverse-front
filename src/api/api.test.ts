@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError, apiRequest, API_BASE_URL } from "./client";
-import { alertsApi, keywordsApi, statementsApi, toQuery, transactionsApi } from "./index";
+import { alertsApi, keywordsApi, reportsApi, settingsApi, statementsApi, suggestionsApi, toQuery, transactionsApi } from "./index";
 
 const mockFetch = (status: number, body?: unknown) =>
   vi.spyOn(globalThis, "fetch").mockResolvedValue(
@@ -92,6 +92,43 @@ describe("alertsApi", () => {
     expect(dismiss[1]?.method).toBe("POST");
     expect(JSON.parse(dismiss[1]?.body as string)).toEqual({ transaction_id: 2, kind: "duplicate" });
     expect(restore[1]?.method).toBe("DELETE");
+  });
+});
+
+describe("suggestion and settings endpoints", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const call = (index = 0) => {
+    const [url, init] = vi.mocked(globalThis.fetch).mock.calls[index];
+    return { url: String(url).replace(`${API_BASE_URL}/api/v1`, ""), method: init?.method ?? "GET", body: init?.body ? JSON.parse(init.body as string) : undefined };
+  };
+
+  it("hits the right paths with the right bodies", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response("{}", { status: 200 }));
+
+    await settingsApi.updateClaude({ api_key: "sk-ant-x", model: "claude-haiku-5-5" });
+    await settingsApi.removeClaudeKey();
+    await suggestionsApi.acceptCategory(5, 10);
+    await suggestionsApi.acceptCategory(6);
+    await suggestionsApi.bulkAccept({ min_confidence: 0.9 });
+    await suggestionsApi.acceptRule(8, { name: "UBER", reapply: "all" });
+    await suggestionsApi.rejectRule(8);
+    await suggestionsApi.categories({ month: "2025-03" });
+    await reportsApi.categorizationProgress(6);
+    await keywordsApi.health();
+
+    expect([0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(call)).toEqual([
+      { url: "/settings/claude", method: "PUT", body: { claude: { api_key: "sk-ant-x", model: "claude-haiku-5-5" } } },
+      { url: "/settings/claude", method: "DELETE", body: undefined },
+      { url: "/category_suggestions/5/accept", method: "POST", body: { subcategory_id: 10 } },
+      { url: "/category_suggestions/6/accept", method: "POST", body: {} },
+      { url: "/category_suggestions/bulk_accept", method: "POST", body: { min_confidence: 0.9 } },
+      { url: "/rule_suggestions/8/accept", method: "POST", body: { name: "UBER", reapply: "all" } },
+      { url: "/rule_suggestions/8/reject", method: "POST", body: undefined },
+      { url: "/category_suggestions?month=2025-03", method: "GET", body: undefined },
+      { url: "/reports/categorization_progress?months=6", method: "GET", body: undefined },
+      { url: "/keywords/health", method: "GET", body: undefined },
+    ]);
   });
 });
 

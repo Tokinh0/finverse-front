@@ -1,14 +1,29 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Button, Container, Form, Modal, Table } from "react-bootstrap";
+import { Alert, Badge, Button, Container, Form, Modal, Table } from "react-bootstrap";
+import { Link } from "react-router-dom";
 import { keywordsApi, subcategoriesApi } from "../api";
 import { Loading } from "../components/LoadingState";
-import type { Keyword, Subcategory } from "../types";
+import type { Keyword, KeywordHealth, KeywordHealthFlag, Subcategory } from "../types";
 
 type FormState = { name: string; subcategory_id: string };
 
 const EMPTY_FORM: FormState = { name: "", subcategory_id: "" };
 
 const errorMessage = (err: unknown, fallback: string) => (err instanceof Error ? err.message : fallback);
+
+const FLAG_STYLES: Record<KeywordHealthFlag, { bg: string; label: (h: KeywordHealth) => string; hint: string }> = {
+  overridden: {
+    bg: "danger",
+    label: (h) => `Overridden ${h.overrides}×`,
+    hint: "You often move transactions this rule matched to another subcategory.",
+  },
+  overlapping: {
+    bg: "warning",
+    label: () => "Overlaps",
+    hint: "Ties with a rule for another subcategory on some transactions; which one wins depends on rule order.",
+  },
+  unused: { bg: "secondary", label: () => "Never matches", hint: "No transaction is categorized by this rule." },
+};
 
 export default function KeywordsCrud() {
   const [keywords, setKeywords] = useState<Keyword[]>([]);
@@ -19,6 +34,8 @@ export default function KeywordsCrud() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingKeyword, setEditingKeyword] = useState<Keyword | null>(null);
   const [formData, setFormData] = useState<FormState>(EMPTY_FORM);
+  const [health, setHealth] = useState<Map<number, KeywordHealth>>(new Map());
+  const [needsAttention, setNeedsAttention] = useState(false);
 
   const subcategoryNames = useMemo(() => new Map(subcategories.map((s) => [s.id, s.name])), [subcategories]);
 
@@ -40,6 +57,18 @@ export default function KeywordsCrud() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Health is extra information: the page works without it.
+  useEffect(() => {
+    keywordsApi
+      .health()
+      .then((entries) => setHealth(new Map(entries.map((entry) => [entry.keyword_id, entry]))))
+      .catch((err) => console.error(err));
+  }, [keywords]);
+
+  const flagged = (keyword: Keyword) => (health.get(keyword.id)?.flags.length ?? 0) > 0;
+  const visibleKeywords = needsAttention ? keywords.filter(flagged) : keywords;
+  const attentionCount = keywords.filter(flagged).length;
 
   const openDialog = (keyword: Keyword | null) => {
     setEditingKeyword(keyword);
@@ -166,28 +195,44 @@ export default function KeywordsCrud() {
         </Form>
       </Modal>
 
+      {health.size > 0 && (
+        <div className="d-flex align-items-center gap-3 mb-2">
+          <Form.Check
+            type="switch"
+            id="keywords-needs-attention"
+            label={`Needs attention (${attentionCount})`}
+            checked={needsAttention}
+            onChange={(e) => setNeedsAttention(e.target.checked)}
+          />
+        </div>
+      )}
+
       <Table bordered hover responsive>
         <thead>
           <tr>
             <th>ID</th>
             <th>Name</th>
             <th>Subcategory</th>
+            <th>Health</th>
             <th className="text-end">Actions</th>
           </tr>
         </thead>
         <tbody>
-          {keywords.length === 0 ? (
+          {visibleKeywords.length === 0 ? (
             <tr>
-              <td colSpan={4} className="text-center text-muted">
-                No keywords found. Add one to get started.
+              <td colSpan={5} className="text-center text-muted">
+                {needsAttention ? "Every rule looks healthy." : "No keywords found. Add one to get started."}
               </td>
             </tr>
           ) : (
-            keywords.map((keyword) => (
+            visibleKeywords.map((keyword) => (
               <tr key={keyword.id}>
                 <td className="fw-medium">{keyword.id}</td>
                 <td>{keyword.name}</td>
                 <td>{subcategoryName(keyword)}</td>
+                <td data-testid={`health-${keyword.id}`}>
+                  <HealthCell health={health.get(keyword.id)} />
+                </td>
                 <td>
                   <div className="d-flex justify-content-end gap-2">
                     <Button size="sm" variant="outline-secondary" onClick={() => openDialog(keyword)}>
@@ -204,5 +249,20 @@ export default function KeywordsCrud() {
         </tbody>
       </Table>
     </Container>
+  );
+}
+
+function HealthCell({ health }: { health?: KeywordHealth }) {
+  if (!health) return null;
+  return (
+    <div className="d-flex flex-wrap align-items-center gap-1 small">
+      <span className="text-muted">{health.matches} match{health.matches === 1 ? "" : "es"}</span>
+      {health.flags.map((flag) => (
+        <Badge key={flag} bg={FLAG_STYLES[flag].bg} text={flag === "overlapping" ? "dark" : undefined} title={FLAG_STYLES[flag].hint}>
+          {FLAG_STYLES[flag].label(health)}
+        </Badge>
+      ))}
+      {health.pending_suggestion_ids.length > 0 && <Link to="/suggestions?tab=rules">Suggested fix →</Link>}
+    </div>
   );
 }

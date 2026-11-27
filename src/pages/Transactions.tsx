@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Badge, Button, Col, Container, Form, Row, Table } from "react-bootstrap";
-import { useSearchParams } from "react-router-dom";
-import { categoriesApi, transactionsApi } from "../api";
+import { Link, useSearchParams } from "react-router-dom";
+import { categoriesApi, suggestionsApi, transactionsApi } from "../api";
 import { ErrorMessage, Loading } from "../components/LoadingState";
+import RuleNudge from "../components/suggestions/RuleNudge";
+import SuggestionChip from "../components/suggestions/SuggestionChip";
 import RecategorizeModal from "../components/transactions/RecategorizeModal";
-import type { Category, RecategorizeResult, Transaction, TransactionFilters, TransactionsPage } from "../types";
+import { useSuggestionsSummary } from "../hooks/suggestionsSummary";
+import type { Category, RecategorizeResult, RuleSuggestion, Transaction, TransactionFilters, TransactionsPage } from "../types";
 import { formatIsoDate, formatMonth } from "../utils/dates";
 import { formatCurrency } from "../utils/formatter";
 
@@ -15,6 +18,7 @@ interface Props {
 const PER_PAGE = 50;
 const FILTER_KEYS = ["month", "category_id", "subcategory_id", "transaction_type", "q"] as const;
 const HIDDEN = "R$ •••";
+const BULK_CONFIDENCE = 0.9;
 
 const TYPE_STYLES: Record<string, { label: string; bg: string }> = {
   debit: { label: "Debit", bg: "secondary" },
@@ -28,8 +32,11 @@ export default function Transactions({ showTotals }: Props) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editing, setEditing] = useState<Transaction | null>(null);
+  const [editing, setEditing] = useState<{ transaction: Transaction; subcategoryId?: number } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [nudge, setNudge] = useState<RuleSuggestion | null>(null);
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const { summary, refresh: refreshSummary } = useSuggestionsSummary();
   const [searchText, setSearchText] = useState(searchParams.get("q") ?? "");
 
   const filters: TransactionFilters = useMemo(() => {
@@ -92,8 +99,31 @@ export default function Transactions({ showTotals }: Props) {
     if (result.keyword) parts.push(`Keyword "${result.keyword.name}" saved.`);
     if (result.updated_count > 0) parts.push(`${result.updated_count} other transaction(s) moved.`);
     setNotice(parts.join(" "));
+    setNudge(result.rule_nudge ?? null);
     load();
+    refreshSummary();
   };
+
+  const decide = async (id: number, action: () => Promise<unknown>, message: string) => {
+    setBusyId(id);
+    try {
+      await action();
+      setNotice(message);
+    } catch (err) {
+      console.error(err);
+      setNotice("Could not save that decision. Try again.");
+    } finally {
+      setBusyId(null);
+      load();
+      refreshSummary();
+    }
+  };
+
+  const acceptAboveThreshold = () =>
+    decide(-1, () => suggestionsApi.bulkAccept({ min_confidence: BULK_CONFIDENCE }), "Accepted every suggestion at 90% or more.");
+
+  const pageSuggestions = data?.transactions.filter((t) => t.pending_suggestion).length ?? 0;
+  const pendingCategoryCount = summary?.pending_category_count ?? 0;
 
   const totalPages = data ? Math.max(1, Math.ceil(data.meta.total_count / data.meta.per_page)) : 1;
   const page = filters.page ?? 1;
@@ -167,6 +197,33 @@ export default function Transactions({ showTotals }: Props) {
         </Alert>
       )}
 
+      {nudge && (
+        <RuleNudge
+          suggestion={nudge}
+          onDone={(message) => {
+            setNudge(null);
+            if (message) setNotice(message);
+            load();
+            refreshSummary();
+          }}
+        />
+      )}
+
+      {pendingCategoryCount > 0 && (
+        <div className="d-flex flex-wrap align-items-center gap-2 border rounded p-2 mb-3 bg-light small" data-testid="suggestions-bar">
+          <span>
+            {pageSuggestions > 0 && `${pageSuggestions} on this page · `}
+            {pendingCategoryCount} transaction suggestion{pendingCategoryCount === 1 ? "" : "s"} to review
+          </span>
+          <Button size="sm" variant="outline-success" disabled={busyId !== null} onClick={acceptAboveThreshold}>
+            Accept all ≥ 90%
+          </Button>
+          <Link to="/suggestions?tab=transactions" className="ms-auto">
+            Review by merchant →
+          </Link>
+        </div>
+      )}
+
       {error ? (
         <ErrorMessage message={error} />
       ) : loading && !data ? (
@@ -206,6 +263,19 @@ export default function Transactions({ showTotals }: Props) {
                           style={{ width: 10, height: 10, background: t.subcategory?.color_code || "#adb5bd" }}
                         />
                         {t.category?.name} / {t.subcategory?.name}
+                        {t.pending_suggestion && (
+                          <SuggestionChip
+                            suggestion={t.pending_suggestion}
+                            busy={busyId !== null}
+                            onAccept={() =>
+                              decide(t.id, () => suggestionsApi.acceptCategory(t.pending_suggestion!.id), "Suggestion accepted.")
+                            }
+                            onChange={() => setEditing({ transaction: t, subcategoryId: t.pending_suggestion!.subcategory.id })}
+                            onReject={() =>
+                              decide(t.id, () => suggestionsApi.rejectCategory(t.pending_suggestion!.id), "Suggestion rejected.")
+                            }
+                          />
+                        )}
                       </td>
                       <td>
                         <Badge bg={type.bg}>{type.label}</Badge>
@@ -217,7 +287,7 @@ export default function Transactions({ showTotals }: Props) {
                         {showTotals ? formatCurrency(t.amount) : HIDDEN}
                       </td>
                       <td className="text-end">
-                        <Button size="sm" variant="outline-secondary" onClick={() => setEditing(t)}>
+                        <Button size="sm" variant="outline-secondary" onClick={() => setEditing({ transaction: t })}>
                           Re-categorize
                         </Button>
                       </td>
@@ -245,7 +315,8 @@ export default function Transactions({ showTotals }: Props) {
       )}
 
       <RecategorizeModal
-        transaction={editing}
+        transaction={editing?.transaction ?? null}
+        initialSubcategoryId={editing?.subcategoryId}
         categories={categories}
         showTotals={showTotals}
         onHide={() => setEditing(null)}

@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { SummaryLinePresenter } from "../presenters/SummaryLinePresenter";
 import UploadSummaryModal from "./UploadSummaryModal";
@@ -17,5 +18,16 @@ describe("UploadSummaryModal", () => {
     expect(within(processed).getByText("Food")).toBeInTheDocument();
     expect(within(skipped).getByText("malformed_row")).toBeInTheDocument();
     expect(within(skipped).getByText("y / z")).toBeInTheDocument();
+  });
+
+  it("says when suggestions are being generated for what rules didn't match", () => {
+    render(
+      <MemoryRouter>
+        <UploadSummaryModal show onHide={vi.fn()} lines={[]} suggesting />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByTestId("suggesting-note")).toHaveTextContent("Suggestions for them are being generated");
+    expect(screen.getByRole("link", { name: "Suggestions" })).toHaveAttribute("href", "/suggestions");
   });
 });

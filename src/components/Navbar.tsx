@@ -1,5 +1,6 @@
-import { Container, Form, Nav, Navbar, NavDropdown } from "react-bootstrap";
+import { Badge, Container, Form, Nav, Navbar, NavDropdown } from "react-bootstrap";
 import { Link, NavLink } from "react-router-dom";
+import { isRunActive, useSuggestionsSummary } from "../hooks/suggestionsSummary";
 
 interface Props {
   showTotals: boolean;
@@ -17,6 +18,9 @@ const LINKS = [
 ];
 
 export default function AppNavbar({ showTotals, setShowTotals }: Props) {
+  const { summary } = useSuggestionsSummary();
+  const pending = summary?.pending_count ?? 0;
+
   return (
     <Navbar bg="dark" variant="dark" expand="md" className="mb-4" fixed="top">
       <Container>
@@ -31,6 +35,20 @@ export default function AppNavbar({ showTotals, setShowTotals }: Props) {
                 {label}
               </Nav.Link>
             ))}
+            <Nav.Link as={NavLink} to="/suggestions" end>
+              Suggestions
+              {pending > 0 && (
+                <Badge bg="warning" text="dark" pill className="ms-1" data-testid="suggestions-badge">
+                  {pending}
+                  <span className="visually-hidden"> to review</span>
+                </Badge>
+              )}
+              {isRunActive(summary) && (
+                <span className="ms-1 small" title="Generating suggestions">
+                  ⟳<span className="visually-hidden"> generating</span>
+                </span>
+              )}
+            </Nav.Link>
             <NavDropdown title="Reports" id="reports-dropdown">
               <NavDropdown.Item as={Link} to="/reports/financial-health">
                 Financial health
@@ -43,7 +61,12 @@ export default function AppNavbar({ showTotals, setShowTotals }: Props) {
               </NavDropdown.Item>
             </NavDropdown>
           </Nav>
-          <Form className="d-flex ms-auto align-items-center">
+          <Nav>
+            <Nav.Link as={NavLink} to="/settings" end aria-label="Settings" title="Settings">
+              ⚙
+            </Nav.Link>
+          </Nav>
+          <Form className="d-flex ms-2 align-items-center">
             <Form.Check
               type="switch"
               id="toggle-totals"

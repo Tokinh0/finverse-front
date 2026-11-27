@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
+import { SuggestionsSummaryContext } from "../hooks/suggestionsSummary";
+import { suggestionRun, suggestionsSummary } from "../test/fixtures";
 import AppNavbar from "./Navbar";
 
 describe("AppNavbar", () => {
@@ -19,5 +21,31 @@ describe("AppNavbar", () => {
 
     await userEvent.click(screen.getByRole("checkbox"));
     expect(setShowTotals).toHaveBeenCalledWith(true);
+  });
+
+  it("shows how many suggestions wait for review and when they're being generated", () => {
+    render(
+      <SuggestionsSummaryContext.Provider
+        value={{ summary: suggestionsSummary({ pending_count: 4, latest_run: suggestionRun({ status: "running" }) }), refresh: vi.fn() }}
+      >
+        <MemoryRouter>
+          <AppNavbar showTotals={false} setShowTotals={vi.fn()} />
+        </MemoryRouter>
+      </SuggestionsSummaryContext.Provider>
+    );
+
+    expect(screen.getByRole("link", { name: /Suggestions 4 to review/ })).toHaveAttribute("href", "/suggestions");
+    expect(screen.getByTitle("Generating suggestions")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute("href", "/settings");
+  });
+
+  it("shows no badge when nothing is pending", () => {
+    render(
+      <MemoryRouter>
+        <AppNavbar showTotals={false} setShowTotals={vi.fn()} />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByTestId("suggestions-badge")).not.toBeInTheDocument();
   });
 });

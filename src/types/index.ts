@@ -103,6 +103,9 @@ export interface CreditDebitReport<T> {
 // GET /transactions
 export type TransactionType = "credit" | "debit" | "unknown";
 
+/** How a transaction got its subcategory. "uncategorized" = still in the Outros fallback. */
+export type CategorizationSource = "keyword" | "ai_accepted" | "manual" | "uncategorized";
+
 export interface Transaction {
   id: number;
   name: string;
@@ -115,6 +118,9 @@ export interface Transaction {
   monthly_statement_id: number;
   subcategory: { id: number; name: string; color_code?: string | null } | null;
   category: { id: number; name: string; color_code?: string | null } | null;
+  categorization_source?: CategorizationSource;
+  keyword_id?: number | null;
+  pending_suggestion?: CategorySuggestion | null;
 }
 
 export interface TransactionsPage {
@@ -152,6 +158,8 @@ export interface RecategorizeResult {
   transaction: Transaction;
   keyword: Keyword | null;
   updated_count: number;
+  /** a pre-filled rule suggestion when this fix made the merchant reach the correction threshold */
+  rule_nudge?: RuleSuggestion | null;
 }
 
 // GET /alerts
@@ -237,3 +245,135 @@ export interface FinancialHealthReport {
   trends?: { months: string[]; totals: number[]; categories: HealthTrendCategory[] };
   year?: HealthYear;
 }
+
+// Categorization suggestions (see finverse/app/presenters/*suggestion*_presenter.rb)
+export type SuggestionStatus = "pending" | "accepted" | "rejected" | "superseded";
+
+export interface CategorySuggestion {
+  id: number;
+  /** "history": the owner already categorized this merchant; "ai": Claude */
+  origin: "history" | "ai";
+  status: SuggestionStatus;
+  /** 0..1 */
+  confidence: number;
+  reason: string | null;
+  subcategory: { id: number; name: string; color_code?: string | null };
+  category: { id: number; name: string; color_code?: string | null };
+  merchant_key: string;
+  /** present in GET /category_suggestions, absent when nested in a transaction */
+  transaction?: Transaction;
+}
+
+export type SuggestionRunStatus = "queued" | "running" | "succeeded" | "failed";
+
+export interface SuggestionRun {
+  id: number;
+  monthly_statement_id: number | null;
+  status: SuggestionRunStatus;
+  error_code: string | null;
+  error_message: string | null;
+  model: string | null;
+  history_suggestions_count: number;
+  ai_suggestions_count: number;
+  rule_suggestions_count: number;
+  ai_requests_count: number;
+  input_tokens: number;
+  output_tokens: number;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string;
+}
+
+export interface SuggestionsSummary {
+  pending_count: number;
+  pending_category_count: number;
+  pending_rule_count: number;
+  claude_configured: boolean;
+  latest_run: SuggestionRun | null;
+}
+
+export interface SubcategoryRef {
+  id: number;
+  name: string;
+  category: string;
+  color_code?: string | null;
+}
+
+export interface RulePreviewRow {
+  id: number;
+  name: string;
+  amount: number;
+  transaction_date: string;
+  categorization_source: CategorizationSource;
+  /** the owner's own decision: the rule leaves it alone */
+  kept: boolean;
+  from: SubcategoryRef | null;
+  to: SubcategoryRef | null;
+}
+
+export interface RulePreview {
+  counts: { uncategorized: number; keyword: number; kept: number };
+  /** transactions re-applying to "all" would move */
+  total: number;
+  /** transactions the rule would be the best match for */
+  matched: number;
+  transactions: RulePreviewRow[];
+}
+
+export type RuleAction = "create" | "update" | "delete";
+export type Reapply = "none" | "uncategorized" | "all";
+
+export interface RuleSuggestion {
+  id: number;
+  action: RuleAction;
+  /** "local": the app's own heuristics; "ai": Claude */
+  origin: "local" | "ai";
+  status: SuggestionStatus;
+  confidence: number;
+  reason: string | null;
+  /** the existing rule (update/delete) */
+  keyword: { id: number; name: string; subcategory: SubcategoryRef | null } | null;
+  /** the rule after the change (create/update) */
+  proposed: { name: string; subcategory: SubcategoryRef | null } | null;
+  /** only while pending */
+  preview: RulePreview | null;
+  created_at: string;
+}
+
+export interface RuleDecisionResult {
+  suggestion: RuleSuggestion;
+  keyword: Keyword | null;
+  updated_count: number;
+}
+
+export type KeywordHealthFlag = "overridden" | "unused" | "overlapping";
+
+export interface KeywordHealth {
+  keyword_id: number;
+  matches: number;
+  overrides: number;
+  top_override_subcategory_id: number | null;
+  overlapping_keyword_ids: number[];
+  flags: KeywordHealthFlag[];
+  pending_suggestion_ids: number[];
+}
+
+export interface CategorizationProgressMonth {
+  /** "YYYY-MM" */
+  month: string;
+  total: number;
+  counts: Record<CategorizationSource, number>;
+  /** share categorized by keyword rules, null without transactions */
+  keyword_share: number | null;
+}
+
+export interface ClaudeSettings {
+  configured: boolean;
+  /** e.g. "sk-ant-…a1B2"; the key itself never leaves the API */
+  masked_key: string | null;
+  model: string;
+  default_model: string;
+  /** set when the key was saved but couldn't be checked */
+  warning?: string | null;
+}
+

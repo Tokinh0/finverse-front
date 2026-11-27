@@ -1,5 +1,14 @@
 import { apiRequest } from "./client";
 import type {
+  CategorizationProgressMonth,
+  CategorySuggestion,
+  ClaudeSettings,
+  KeywordHealth,
+  Reapply,
+  RuleDecisionResult,
+  RuleSuggestion,
+  SuggestionRun,
+  SuggestionsSummary,
   AlertKind,
   AlertsResponse,
   Asset,
@@ -26,10 +35,13 @@ export const statementsApi = {
   upload: (file: File) => {
     const body = new FormData();
     body.append("monthly_statement[file]", file);
-    return apiRequest<{ statement: RawMonthlyStatement; summary_lines: RawSummaryLine[] }>("/monthly_statements", {
-      method: "POST",
-      body,
-    });
+    return apiRequest<{ statement: RawMonthlyStatement; summary_lines: RawSummaryLine[]; suggestion_run?: SuggestionRun | null }>(
+      "/monthly_statements",
+      {
+        method: "POST",
+        body,
+      }
+    );
   },
   remove: (id: number) => apiRequest(`/monthly_statements/${id}`, { method: "DELETE" }),
 };
@@ -60,6 +72,7 @@ export const keywordsApi = {
   update: (id: number, keyword: KeywordParams) =>
     apiRequest<Keyword>(`/keywords/${id}`, { method: "PATCH", json: { keyword } }),
   remove: (id: number) => apiRequest(`/keywords/${id}`, { method: "DELETE" }),
+  health: () => apiRequest<KeywordHealth[]>("/keywords/health"),
 };
 
 export type AssetParams = Pick<Asset, "asset_type" | "ticker" | "description" | "rating" | "quantity"> & {
@@ -79,6 +92,8 @@ export const reportsApi = {
   monthlyByCategory: () => apiRequest<CreditDebitReport<MonthlyByCategoryReport>>("/reports/monthly_by_category"),
   monthlyBySubcategory: () =>
     apiRequest<CreditDebitReport<MonthlyBySubcategoryReport>>("/reports/monthly_by_subcategory"),
+  categorizationProgress: (months = 6) =>
+    apiRequest<CategorizationProgressMonth[]>(`/reports/categorization_progress?months=${months}`),
 };
 
 /** Builds "?a=1&b=2" from the non-empty values. */
@@ -103,4 +118,30 @@ export const alertsApi = {
     apiRequest("/alerts/dismiss", { method: "POST", json: { transaction_id: transactionId, kind } }),
   restore: (transactionId: number, kind: AlertKind) =>
     apiRequest("/alerts/dismiss", { method: "DELETE", json: { transaction_id: transactionId, kind } }),
+};
+
+export const settingsApi = {
+  claude: () => apiRequest<ClaudeSettings>("/settings/claude"),
+  updateClaude: (claude: { api_key?: string; model?: string }) =>
+    apiRequest<ClaudeSettings>("/settings/claude", { method: "PUT", json: { claude } }),
+  removeClaudeKey: () => apiRequest<ClaudeSettings>("/settings/claude", { method: "DELETE" }),
+};
+
+export const suggestionsApi = {
+  summary: () => apiRequest<SuggestionsSummary>("/suggestions/summary"),
+  startRun: () => apiRequest<SuggestionRun>("/suggestion_runs", { method: "POST" }),
+  categories: (params: { month?: string; min_confidence?: number } = {}) =>
+    apiRequest<CategorySuggestion[]>(`/category_suggestions${toQuery(params)}`),
+  acceptCategory: (id: number, subcategoryId?: number) =>
+    apiRequest<CategorySuggestion>(`/category_suggestions/${id}/accept`, {
+      method: "POST",
+      json: subcategoryId ? { subcategory_id: subcategoryId } : {},
+    }),
+  rejectCategory: (id: number) => apiRequest<CategorySuggestion>(`/category_suggestions/${id}/reject`, { method: "POST" }),
+  bulkAccept: (params: { min_confidence?: number; merchant_key?: string }) =>
+    apiRequest<{ accepted_count: number }>("/category_suggestions/bulk_accept", { method: "POST", json: params }),
+  rules: () => apiRequest<RuleSuggestion[]>("/rule_suggestions"),
+  acceptRule: (id: number, params: { name?: string; subcategory_id?: number; reapply: Reapply }) =>
+    apiRequest<RuleDecisionResult>(`/rule_suggestions/${id}/accept`, { method: "POST", json: params }),
+  rejectRule: (id: number) => apiRequest<RuleDecisionResult>(`/rule_suggestions/${id}/reject`, { method: "POST" }),
 };

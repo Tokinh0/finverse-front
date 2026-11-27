@@ -2,7 +2,8 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { keywordsApi, subcategoriesApi } from "../api";
-import { keyword, subcategory } from "../test/fixtures";
+import { MemoryRouter } from "react-router-dom";
+import { keyword, keywordHealth, subcategory } from "../test/fixtures";
 import KeywordsCrud from "./KeywordsCrud";
 
 vi.mock("../api", async () => (await import("../test/mockApi")).mockApiModule());
@@ -68,5 +69,27 @@ describe("KeywordsCrud", () => {
     expect(await screen.findByText("Network down")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByText("IFOOD")).toBeInTheDocument();
+  });
+
+  it("shows rule health and filters the rules that need attention", async () => {
+    vi.mocked(keywordsApi.list).mockResolvedValue([keyword(), keyword({ id: 101, name: "PIX" }), keyword({ id: 102, name: "NADA" })]);
+    vi.mocked(keywordsApi.health).mockResolvedValue([
+      keywordHealth(),
+      keywordHealth({ keyword_id: 101, matches: 4, overrides: 6, flags: ["overridden", "overlapping"], pending_suggestion_ids: [9] }),
+      keywordHealth({ keyword_id: 102, matches: 0, flags: ["unused"] }),
+    ]);
+    render(
+      <MemoryRouter>
+        <KeywordsCrud />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByTestId("health-101")).toHaveTextContent("4 matchesOverridden 6×Overlaps");
+    expect(screen.getByTestId("health-102")).toHaveTextContent("Never matches");
+    expect(within(screen.getByTestId("health-101")).getByRole("link", { name: "Suggested fix →" })).toHaveAttribute("href", "/suggestions?tab=rules");
+
+    await userEvent.click(screen.getByLabelText("Needs attention (2)"));
+    expect(screen.queryByText("IFOOD")).not.toBeInTheDocument();
+    expect(screen.getByText("PIX")).toBeInTheDocument();
   });
 });

@@ -6,6 +6,8 @@ import { formatIsoDate } from "../../utils/dates";
 
 interface Props {
   transaction: Transaction | null;
+  /** pre-select this subcategory (e.g. when changing a suggestion) */
+  initialSubcategoryId?: number;
   categories: Category[];
   showTotals: boolean;
   onHide: () => void;
@@ -23,7 +25,7 @@ const errorText = (err: unknown) => {
   return errors?.join(", ") || "Could not save the change.";
 };
 
-export default function RecategorizeModal({ transaction, categories, showTotals, onHide, onSaved }: Props) {
+export default function RecategorizeModal({ transaction, initialSubcategoryId, categories, showTotals, onHide, onSaved }: Props) {
   const [subcategoryId, setSubcategoryId] = useState("");
   const [transactionType, setTransactionType] = useState<TransactionType>("debit");
   const [createKeyword, setCreateKeyword] = useState(false);
@@ -34,13 +36,13 @@ export default function RecategorizeModal({ transaction, categories, showTotals,
 
   useEffect(() => {
     if (!transaction) return;
-    setSubcategoryId(String(transaction.subcategory?.id ?? ""));
+    setSubcategoryId(String(initialSubcategoryId ?? transaction.subcategory?.id ?? ""));
     setTransactionType(transaction.transaction_type);
     setCreateKeyword(false);
     setKeyword(transaction.name.trim());
     setApplyToMatching(true);
     setError(null);
-  }, [transaction]);
+  }, [transaction, initialSubcategoryId]);
 
   if (!transaction) return null;
 

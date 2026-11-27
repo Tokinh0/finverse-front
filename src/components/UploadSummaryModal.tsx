@@ -1,13 +1,16 @@
-import { Modal, Table, Button } from "react-bootstrap";
+import { Alert, Modal, Table, Button } from "react-bootstrap";
+import { Link } from "react-router-dom";
 import { SummaryLinePresenter } from "../presenters/SummaryLinePresenter";
 
 interface Props {
   show: boolean;
   onHide: () => void;
   lines: SummaryLinePresenter[];
+  /** a suggestion run started for what keyword rules left uncategorized */
+  suggesting?: boolean;
 }
 
-export default function UploadSummaryModal({ show, onHide, lines }: Props) {
+export default function UploadSummaryModal({ show, onHide, lines, suggesting = false }: Props) {
   const processed = lines.filter((line) => line.status === "processed");
   const skipped = lines.filter((line) => line.status !== "processed");
 
@@ -17,6 +20,16 @@ export default function UploadSummaryModal({ show, onHide, lines }: Props) {
         <Modal.Title>Upload Summary</Modal.Title>
       </Modal.Header>
       <Modal.Body>
+        {suggesting && (
+          <Alert variant="info" data-testid="suggesting-note">
+            Some transactions didn't match a keyword rule. Suggestions for them are being generated in the background;
+            review them in{" "}
+            <Link to="/suggestions" onClick={onHide}>
+              Suggestions
+            </Link>
+            .
+          </Alert>
+        )}
         <h5>✅ Processed Transactions</h5>
         <div style={{ overflowX: "auto" }}>
           <Table size="sm" striped bordered>

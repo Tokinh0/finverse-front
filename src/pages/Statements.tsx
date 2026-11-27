@@ -1,7 +1,8 @@
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { Button, Col, Container, Form, Row, Spinner, Table } from "react-bootstrap";
-import { statementsApi } from "../api";
+import { ApiError, statementsApi } from "../api";
 import UploadSummaryModal from "../components/UploadSummaryModal";
+import { useSuggestionsSummary } from "../hooks/suggestionsSummary";
 import { MonthlyStatementPresenter } from "../presenters/MonthlyStatementPresenter";
 import { SummaryLinePresenter } from "../presenters/SummaryLinePresenter";
 
@@ -14,6 +15,8 @@ export default function Statements() {
   const [loading, setLoading] = useState(false);
   const [summaryLines, setSummaryLines] = useState<SummaryLinePresenter[]>([]);
   const [showSummary, setShowSummary] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
+  const { refresh: refreshSuggestions } = useSuggestionsSummary();
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -37,12 +40,15 @@ export default function Statements() {
       const uploaded = await statementsApi.upload(newFile);
       setFiles((prev) => [...prev, new MonthlyStatementPresenter(uploaded.statement)]);
       setSummaryLines(SummaryLinePresenter.parseMany(uploaded.summary_lines));
+      setSuggesting(Boolean(uploaded.suggestion_run));
       setShowSummary(true);
+      refreshSuggestions();
       setNewFile(null);
       if (fileInput.current) fileInput.current.value = "";
     } catch (error) {
       console.error("Upload error:", error);
-      alert("Failed to upload file.");
+      const reason = error instanceof ApiError ? (error.body as { file?: string[] } | undefined)?.file?.[0] : undefined;
+      alert(reason ? `Failed to upload file: ${reason}` : "Failed to upload file.");
     } finally {
       setLoading(false);
     }
@@ -117,7 +123,7 @@ export default function Statements() {
           </tbody>
         </Table>
       )}
-      <UploadSummaryModal show={showSummary} onHide={() => setShowSummary(false)} lines={summaryLines} />
+      <UploadSummaryModal show={showSummary} onHide={() => setShowSummary(false)} lines={summaryLines} suggesting={suggesting} />
     </Container>
   );
 }
