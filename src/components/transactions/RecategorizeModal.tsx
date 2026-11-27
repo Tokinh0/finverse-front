@@ -14,6 +14,9 @@ interface Props {
   onSaved: (result: RecategorizeResult) => void;
 }
 
+/** matches the API's limit on a correction note */
+const REASON_LIMIT = 300;
+
 const TYPES: [TransactionType, string][] = [
   ["debit", "Debit (money out)"],
   ["credit", "Credit (money in)"],
@@ -31,6 +34,7 @@ export default function RecategorizeModal({ transaction, initialSubcategoryId, c
   const [createKeyword, setCreateKeyword] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [applyToMatching, setApplyToMatching] = useState(true);
+  const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,6 +45,7 @@ export default function RecategorizeModal({ transaction, initialSubcategoryId, c
     setCreateKeyword(false);
     setKeyword(transaction.name.trim());
     setApplyToMatching(true);
+    setReason("");
     setError(null);
   }, [transaction, initialSubcategoryId]);
 
@@ -55,6 +60,7 @@ export default function RecategorizeModal({ transaction, initialSubcategoryId, c
         subcategory_id: Number(subcategoryId),
         transaction_type: transactionType,
         ...(createKeyword && keyword.trim() ? { keyword: keyword.trim(), apply_to_matching: applyToMatching } : {}),
+        ...(reason.trim() ? { reason: reason.trim() } : {}),
       });
       onSaved(result);
     } catch (err) {
@@ -106,6 +112,23 @@ export default function RecategorizeModal({ transaction, initialSubcategoryId, c
                 </option>
               ))}
             </Form.Select>
+          </Form.Group>
+
+          <Form.Group controlId="recategorize-reason">
+            <Form.Label>Why? (optional)</Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={2}
+              maxLength={REASON_LIMIT}
+              placeholder="e.g. PIX to Maria is my monthly rent"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              disabled={saving}
+            />
+            <Form.Text>
+              Saved with this change. Suggestions for similar transactions use it, and it's sent to Claude when a key is saved
+              (long numbers are removed first).
+            </Form.Text>
           </Form.Group>
 
           <Form.Check

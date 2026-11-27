@@ -157,6 +157,7 @@ export default function Settings() {
               </li>
               <li>how many times it appears, its average amount, debit or credit, and card or checking account</li>
               <li>your category and subcategory names, your keyword rules, and a few past transactions you categorized</li>
+              <li>the reasons you wrote when re-categorizing transactions (long numbers removed)</li>
             </ul>
             No dates, balances, totals or statement files are sent. Without a key, nothing leaves Finverse.
           </Alert>

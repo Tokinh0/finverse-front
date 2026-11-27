@@ -152,6 +152,8 @@ export interface RecategorizeParams {
   keyword?: string;
   /** re-run matching on other transactions containing the keyword */
   apply_to_matching?: boolean;
+  /** why the owner made this change; Claude reads it when suggesting for similar transactions */
+  reason?: string;
 }
 
 export interface RecategorizeResult {

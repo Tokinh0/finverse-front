@@ -70,4 +70,29 @@ describe("RecategorizeModal", () => {
 
     expect(await screen.findByText("Subcategory must exist")).toBeInTheDocument();
   });
+
+  it("sends the owner's reason so future suggestions can use it", async () => {
+    vi.mocked(transactionsApi.recategorize).mockResolvedValue({ transaction: transaction(), keyword: null, updated_count: 0 });
+    renderModal();
+
+    await userEvent.selectOptions(screen.getByLabelText("Subcategory"), "10");
+    await userEvent.type(screen.getByLabelText("Why? (optional)"), "  Snack bar near the office ");
+    expect(screen.getByLabelText("Why? (optional)")).toHaveAttribute("maxlength", "300");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(transactionsApi.recategorize).toHaveBeenCalledWith(1000, {
+      subcategory_id: 10,
+      transaction_type: "debit",
+      reason: "Snack bar near the office",
+    });
+  });
+
+  it("pre-selects a suggested subcategory", () => {
+    render(
+      <RecategorizeModal transaction={transaction()} initialSubcategoryId={10} categories={categories} showTotals onHide={vi.fn()} onSaved={vi.fn()} />
+    );
+
+    expect(screen.getByLabelText("Subcategory")).toHaveValue("10");
+  });
 });
+
