@@ -74,8 +74,12 @@ export const en = {
       total_expended: "Total Expended",
       total_received: "Total Received",
     },
-    subcategory: {
-      subtitle: "Where the money came from and where it went, month by month. Click any subcategory to see its transactions.",
+    breakdown: {
+      subtitleBySubcategory: "Where the money came from and where it went, month by month. Click any subcategory to see its transactions.",
+      subtitleByCategory: "Each category is the sum of its subcategories. Click any category to see its subcategories and transactions.",
+      categories: (n: number) => `${n} ${n === 1 ? "category" : "categories"}`,
+      bySubcategory: "By subcategory",
+      subcategory: "Subcategory",
       moneyIn: "Money in",
       moneyOut: "Money out",
       balance: "Balance",

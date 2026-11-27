@@ -73,8 +73,12 @@ export const pt: Messages = {
       total_expended: "Total gasto",
       total_received: "Total recebido",
     },
-    subcategory: {
-      subtitle: "De onde o dinheiro veio e para onde foi, mês a mês. Clique em uma subcategoria para ver as transações.",
+    breakdown: {
+      subtitleBySubcategory: "De onde o dinheiro veio e para onde foi, mês a mês. Clique em uma subcategoria para ver as transações.",
+      subtitleByCategory: "Cada categoria é a soma das suas subcategorias. Clique em uma categoria para ver as subcategorias e transações.",
+      categories: (n: number) => `${n} ${n === 1 ? "categoria" : "categorias"}`,
+      bySubcategory: "Por subcategoria",
+      subcategory: "Subcategoria",
       moneyIn: "Entradas",
       moneyOut: "Saídas",
       balance: "Saldo",
