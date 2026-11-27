@@ -8,6 +8,7 @@ import KeywordsCrud from "./pages/KeywordsCrud";
 import PortfolioDashboard from "./pages/PortfolioDashboard";
 import Statements from "./pages/Statements";
 import Transactions from "./pages/Transactions";
+import FinancialHealth from "./pages/reports/FinancialHealth";
 import MonthlyByCategory from "./pages/reports/MonthlyByCategory";
 import MonthlyBySubcategory from "./pages/reports/MonthlyBySubcategory";
 
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="/alerts" element={<ChargeAlerts showTotals={showTotals} />} />
         <Route path="/categories&subcategories" element={<CategorySubcategoryManager />} />
         <Route path="/keywords" element={<KeywordsCrud />} />
+        <Route path="/reports/financial-health" element={<FinancialHealth showTotals={showTotals} />} />
         <Route path="/reports/monthly-by-category" element={<MonthlyByCategory />} />
         <Route path="/reports/monthly-by-subcategory" element={<MonthlyBySubcategory showTotals={showTotals} />} />
         <Route path="/assets" element={<PortfolioDashboard showTotals={showTotals} />} />

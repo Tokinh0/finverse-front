@@ -5,6 +5,7 @@ import type {
   Asset,
   Category,
   CreditDebitReport,
+  FinancialHealthReport,
   Keyword,
   MonthlyByCategoryReport,
   MonthlyBySubcategoryReport,
@@ -73,6 +74,8 @@ export const assetsApi = {
 };
 
 export const reportsApi = {
+  financialHealth: (params: { period?: number; as_of?: string; year?: number } = {}) =>
+    apiRequest<FinancialHealthReport>(`/reports/financial_health${toQuery(params)}`),
   monthlyByCategory: () => apiRequest<CreditDebitReport<MonthlyByCategoryReport>>("/reports/monthly_by_category"),
   monthlyBySubcategory: () =>
     apiRequest<CreditDebitReport<MonthlyBySubcategoryReport>>("/reports/monthly_by_subcategory"),

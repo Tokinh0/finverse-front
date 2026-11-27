@@ -1,0 +1,38 @@
+.health { text-align: left; padding-bottom: 4rem; }
+.health h1 { font-size: 2rem; margin: 0; }
+.health h2 { font-size: 1.25rem; margin: 0; font-weight: 600; }
+.health-section { background: #fff; border: 1px solid rgba(11, 11, 11, 0.1); border-radius: 12px; padding: 1.25rem; display: grid; gap: 1rem; min-width: 0; }
+.health-section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.5rem 1rem; }
+.health-sub { color: #666; font-size: 0.9rem; margin: 0; }
+.health-grid { display: grid; gap: 1.25rem; }
+.health-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem; }
+.health-tile { border: 1px solid rgba(11, 11, 11, 0.1); border-radius: 10px; padding: 0.85rem 1rem; display: grid; gap: 0.15rem; align-content: start; background: #fff; }
+.health-tile[data-hero] { background: #f3f7fd; border-color: #cce3fd; }
+.health-tile-label { color: #666; font-size: 0.85rem; }
+.health-tile-value { font-size: 1.45rem; font-weight: 600; color: #191919; }
+.health-hero-value { font-size: 3rem; line-height: 1.05; font-weight: 600; color: #191919; }
+.health-tile-meta { color: #666; font-size: 0.85rem; }
+.health-segbar { display: flex; gap: 2px; height: 28px; }
+.health-segbar > div { border-radius: 4px; color: #fff; font-size: 0.78rem; font-weight: 600; display: flex; align-items: center; padding-left: 6px; overflow: hidden; white-space: nowrap; min-width: 0; }
+.health-rank { display: grid; gap: 0.6rem; }
+.health-rank-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.25rem 1rem; align-items: center; }
+.health-rank-name { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; min-width: 0; }
+.health-rank-name span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.health-rank-track { grid-column: 1 / -1; height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
+.health-rank-track > div { height: 100%; border-radius: 0 4px 4px 0; }
+.health-rank-subs { grid-column: 1 / -1; color: #666; font-size: 0.82rem; }
+.health-swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; display: inline-block; }
+.health-legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; color: #666; font-size: 0.85rem; }
+.health-legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+.health-table { width: 100%; font-size: 0.88rem; border-collapse: collapse; }
+.health-table th { color: #666; font-weight: 500; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #e7e7e7; padding: 0.4rem 0.5rem; white-space: nowrap; }
+.health-table td { border-bottom: 1px solid #f0f0f0; padding: 0.45rem 0.5rem; vertical-align: middle; }
+.health-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.health-table-wrap { overflow-x: auto; }
+.health-tooltip { background: #fff; border: 1px solid rgba(11, 11, 11, 0.12); border-radius: 8px; padding: 0.6rem 0.75rem; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); font-size: 0.85rem; min-width: 180px; }
+.health-tooltip-row { display: flex; justify-content: space-between; gap: 1rem; align-items: center; }
+.health-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; }
+.health-period { display: inline-flex; border: 1px solid #c2c2c2; border-radius: 8px; overflow: hidden; }
+.health-period button { border: 0; border-radius: 0; background: #fff; color: #191919; padding: 0.35rem 0.85rem; font-size: 0.9rem; }
+.health-period button + button { border-left: 1px solid #c2c2c2; }
+.health-period button[aria-pressed="true"] { background: #191919; color: #fff; }

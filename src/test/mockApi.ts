@@ -9,7 +9,7 @@ export const mockApiModule = () => ({
   subcategoriesApi: { list: vi.fn(), create: vi.fn(), update: vi.fn() },
   keywordsApi: { list: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn() },
   assetsApi: { dashboard: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn() },
-  reportsApi: { monthlyByCategory: vi.fn(), monthlyBySubcategory: vi.fn() },
+  reportsApi: { monthlyByCategory: vi.fn(), monthlyBySubcategory: vi.fn(), financialHealth: vi.fn() },
   transactionsApi: { list: vi.fn(), recategorize: vi.fn() },
   alertsApi: { list: vi.fn(), dismiss: vi.fn(), restore: vi.fn() },
   toQuery: (params: object) => `?${new URLSearchParams(params as Record<string, string>)}`,

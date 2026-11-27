@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { renderCustomPieLabel } from "./chartHelper";
 import { colorAt, formatBRL } from "./colors";
 import { formatIsoDate, formatMonth } from "./dates";
+import { categoryColors, compactBRL, delta, formatPct, OTHER_COLOR, periodLabel, relativeChange, shortMonth } from "./health";
 import { formatCurrency, parseAmount } from "./formatter";
 import { toCategoryChartData } from "./reports";
 
@@ -69,6 +70,37 @@ describe("dates", () => {
     expect(formatIsoDate("2025-03-02")).toBe("02/03/2025");
     expect(formatMonth("2025-03")).toBe("03/2025");
     expect(formatIsoDate("bad")).toBe("bad");
+  });
+});
+
+describe("health helpers", () => {
+  it("assigns colors by category id, falling back to gray past the palette", () => {
+    const colors = categoryColors([3, 1, 2, 4, 5, 6, 7].map((id) => ({ id, name: `C${id}` })));
+
+    expect(colors.get(1)).toBe("#257de0");
+    expect(colors.get(3)).toBe("#00b894");
+    expect(colors.get(7)).toBe(OTHER_COLOR);
+  });
+
+  it("describes changes with direction and whether up is good", () => {
+    expect(delta(0.123, true)).toEqual({ text: "↑ 12%", tone: "good", label: "up" });
+    expect(delta(0.123, false).tone).toBe("bad");
+    expect(delta(-0.5, false)).toEqual({ text: "↓ 50%", tone: "good", label: "down" });
+    expect(delta(0.001, true).text).toBe("→ 0%");
+    expect(delta(null, true).text).toBe("New");
+    expect(relativeChange(150, 100)).toBe(0.5);
+    expect(relativeChange(1, 0)).toBeNull();
+  });
+
+  it("formats months, periods, percentages and axis amounts", () => {
+    expect(shortMonth("2025-09")).toBe("Sep 25");
+    expect(periodLabel("2025-04-01", "2025-06-30")).toBe("Apr–Jun 25");
+    expect(periodLabel("2024-11-01", "2025-10-31")).toBe("Nov 24 – Oct 25");
+    expect(periodLabel("2025-06-01", "2025-06-30")).toBe("Jun 25");
+    expect(formatPct(0.756)).toBe("76%");
+    expect(formatPct(null)).toBe("—");
+    expect(compactBRL(12345)).toBe("R$ 12,3 mil");
+    expect(compactBRL(950)).toBe("R$ 950");
   });
 });
 

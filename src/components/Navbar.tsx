@@ -32,6 +32,9 @@ export default function AppNavbar({ showTotals, setShowTotals }: Props) {
               </Nav.Link>
             ))}
             <NavDropdown title="Reports" id="reports-dropdown">
+              <NavDropdown.Item as={Link} to="/reports/financial-health">
+                Financial health
+              </NavDropdown.Item>
               <NavDropdown.Item as={Link} to="/reports/monthly-by-category">
                 Monthly by Category
               </NavDropdown.Item>

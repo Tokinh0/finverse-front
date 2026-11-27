@@ -170,3 +170,70 @@ export interface AlertsResponse {
   month: string | null;
   alerts: ChargeAlert[];
 }
+
+// GET /reports/financial_health
+export interface HealthTotals {
+  income: number;
+  expenses: number;
+  invested: number;
+  net: number;
+  /** net / income, null without income */
+  savings_rate: number | null;
+}
+
+export interface HealthCategoryRef {
+  id: number;
+  name: string;
+  color_code?: string | null;
+}
+
+export interface HealthCategory extends HealthCategoryRef {
+  total: number;
+  share: number;
+  previous_total: number;
+  change_pct: number | null;
+  subcategories: { id: number; name: string; total: number }[];
+}
+
+export interface HealthTrendCategory extends HealthCategoryRef {
+  values: number[];
+  last_month: number;
+  previous_month: number;
+  average: number;
+  change_vs_previous_pct: number | null;
+  change_vs_average_pct: number | null;
+}
+
+export interface HealthYearMonth extends HealthTotals {
+  month: number;
+  has_data: boolean;
+  previous_year_expenses: number | null;
+}
+
+export interface HealthYear {
+  year: number;
+  previous_year: number;
+  months_with_data: number;
+  /** previous-year figures cover January through this month */
+  compared_through_month: number;
+  totals: HealthTotals;
+  previous_totals: HealthTotals | null;
+  monthly: HealthYearMonth[];
+  best_month: { month: number; net: number; income: number; expenses: number } | null;
+  worst_month: { month: number; net: number; income: number; expenses: number } | null;
+  categories: (HealthCategoryRef & { total: number; previous_total: number; change_pct: number | null })[];
+  top_merchants: { name: string; total: number; count: number; subcategory: string }[];
+}
+
+export interface FinancialHealthReport {
+  as_of: string | null;
+  period_months: number;
+  months_available: string[];
+  years_available: number[];
+  range?: { from: string; to: string };
+  previous_range?: { from: string; to: string };
+  summary?: { current: HealthTotals; previous: HealthTotals };
+  categories?: HealthCategory[];
+  trends?: { months: string[]; totals: number[]; categories: HealthTrendCategory[] };
+  year?: HealthYear;
+}
