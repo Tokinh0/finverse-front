@@ -37,10 +37,12 @@ export function SubcategoryTooltip({ active, payload, showTotals }: TooltipProps
       style={{
         backgroundColor: "#fff",
         border: "1px solid #ccc",
-        padding: "10px",
+        padding: "14px",
         textAlign: "left",
-        width: "340px",
-        height: "260px",
+        width: "min(560px, 90vw)",
+        maxHeight: "460px",
+        fontSize: "15px",
+        lineHeight: 1.4,
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
@@ -62,7 +64,7 @@ export function SubcategoryTooltip({ active, payload, showTotals }: TooltipProps
         {transactions.map((t, idx) => (
           <li
             key={idx}
-            style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: amountColor(t.amount) }}
+            style={{ overflowWrap: "anywhere", marginBottom: "4px", color: amountColor(t.amount) }}
           >
             {t.transaction_date} - R$ {showTotals ? t.amount.toFixed(2) : "-"} - {t.name.replace(/\s+/g, " ").trim()}
           </li>
