@@ -16,7 +16,7 @@ describe("UploadSummaryModal", () => {
     const [processed, skipped] = screen.getAllByRole("table");
     expect(within(processed).getByText("R$ 60.28")).toBeInTheDocument();
     expect(within(processed).getByText("Food")).toBeInTheDocument();
-    expect(within(skipped).getByText("malformed_row")).toBeInTheDocument();
+    expect(within(skipped).getByText("Not a transaction row")).toBeInTheDocument();
     expect(within(skipped).getByText("y / z")).toBeInTheDocument();
   });
 

@@ -6,6 +6,7 @@ import { formatIsoDate, formatMonth } from "./dates";
 import { categoryColors, compactBRL, delta, formatPct, OTHER_COLOR, periodLabel, relativeChange, shortMonth } from "./health";
 import { formatCurrency, parseAmount } from "./formatter";
 import { toCategoryChartData } from "./reports";
+import { setCurrentLocale } from "../i18n/locale";
 
 describe("formatCurrency", () => {
   it("formats BRL in pt-BR", () => {
@@ -66,10 +67,13 @@ describe("renderCustomPieLabel", () => {
 });
 
 describe("dates", () => {
-  it("formats ISO dates and months the Brazilian way", () => {
-    expect(formatIsoDate("2025-03-02")).toBe("02/03/2025");
+  it("formats ISO dates month-first in English and day-first in Portuguese", () => {
+    expect(formatIsoDate("2025-03-02")).toBe("03/02/2025");
     expect(formatMonth("2025-03")).toBe("03/2025");
     expect(formatIsoDate("bad")).toBe("bad");
+
+    setCurrentLocale("pt-BR");
+    expect(formatIsoDate("2025-03-02")).toBe("02/03/2025");
   });
 });
 
@@ -99,8 +103,19 @@ describe("health helpers", () => {
     expect(periodLabel("2025-06-01", "2025-06-30")).toBe("Jun 25");
     expect(formatPct(0.756)).toBe("76%");
     expect(formatPct(null)).toBe("—");
-    expect(compactBRL(12345)).toBe("R$ 12,3 mil");
+    expect(compactBRL(12345)).toBe("R$ 12.3k");
     expect(compactBRL(950)).toBe("R$ 950");
+  });
+
+  it("uses Portuguese month names, separators and words in Portuguese", () => {
+    setCurrentLocale("pt-BR");
+
+    expect(shortMonth("2025-09")).toBe("set 25");
+    expect(periodLabel("2025-04-01", "2025-06-30")).toBe("abr–jun 25");
+    expect(formatPct(0.7563, 1)).toBe("75,6%");
+    expect(compactBRL(12345)).toBe("R$ 12,3 mil");
+    expect(delta(null, true).text).toBe("Novo");
+    expect(delta(0.2, true).label).toBe("subiu");
   });
 });
 

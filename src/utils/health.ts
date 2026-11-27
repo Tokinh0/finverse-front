@@ -1,4 +1,6 @@
+import { messages } from "../i18n/locale";
 import type { HealthCategoryRef } from "../types";
+import { numberLocale } from "./dates";
 
 /**
  * Validated categorical palette (light surface), in its fixed, CVD-safe slot order.
@@ -26,21 +28,24 @@ export function categoryColors(categories: HealthCategoryRef[]) {
   return new Map(ids.map((id, index) => [id, SERIES_COLORS[index] ?? OTHER_COLOR]));
 }
 
-export const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** Short month names in the current language ("Jan".."Dec" / "jan".."dez"). */
+export const monthNames = () => messages().months;
 
 /** "2025-09" -> "Sep 25" */
 export const shortMonth = (key: string) => {
   const [year, month] = key.split("-");
-  return `${MONTH_NAMES[Number(month) - 1]} ${year.slice(2)}`;
+  return `${monthNames()[Number(month) - 1]} ${year.slice(2)}`;
 };
 
 /** 12345 -> "R$ 12,3 mil", 950 -> "R$ 950" (axis ticks) */
 export const compactBRL = (value: number) =>
-  Math.abs(value) >= 1000 ? `R$ ${(value / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil` : `R$ ${Math.round(value)}`;
+  Math.abs(value) >= 1000
+    ? `R$ ${(value / 1000).toLocaleString(numberLocale(), { maximumFractionDigits: 1 })}${messages().health.thousand}`
+    : `R$ ${Math.round(value)}`;
 
 /** 0.1234 -> "12%", null -> "—" */
 export const formatPct = (value: number | null | undefined, digits = 0) =>
-  value === null || value === undefined ? "—" : `${(value * 100).toLocaleString("pt-BR", { maximumFractionDigits: digits })}%`;
+  value === null || value === undefined ? "—" : `${(value * 100).toLocaleString(numberLocale(), { maximumFractionDigits: digits })}%`;
 
 export interface Delta {
   /** "↑ 12%" / "↓ 3%" / "New" / "—" */
@@ -52,14 +57,17 @@ export interface Delta {
 
 /** Relative change; up is good for income/net/invested, bad for spending. */
 export function delta(change: number | null, upIsGood: boolean, hadPrevious = true): Delta {
-  if (change === null) return { text: hadPrevious ? "New" : "—", tone: "neutral", label: hadPrevious ? "no spending before" : "no previous data" };
+  const words = messages().health.delta;
+  if (change === null) {
+    return { text: hadPrevious ? words.new : "—", tone: "neutral", label: hadPrevious ? words.noSpendingBefore : words.noPreviousData };
+  }
   const rounded = Math.round(change * 100);
-  if (rounded === 0) return { text: "→ 0%", tone: "neutral", label: "unchanged" };
+  if (rounded === 0) return { text: "→ 0%", tone: "neutral", label: words.unchanged };
   const up = rounded > 0;
   return {
     text: `${up ? "↑" : "↓"} ${Math.abs(rounded)}%`,
     tone: up === upIsGood ? "good" : "bad",
-    label: up ? "up" : "down",
+    label: up ? words.up : words.down,
   };
 }
 

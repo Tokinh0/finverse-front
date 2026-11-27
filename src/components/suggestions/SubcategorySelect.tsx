@@ -1,5 +1,6 @@
 import { Form } from "react-bootstrap";
 import type { Category } from "../../types";
+import { useI18n } from "../../i18n/context";
 
 interface Props {
   categories: Category[];
@@ -16,6 +17,7 @@ const CREATE_NEW = "__create__";
 
 /** A subcategory picker grouped by category. */
 export default function SubcategorySelect({ categories, value, onChange, label, disabled, size, onCreateNew }: Props) {
+  const s = useI18n().t.suggestions.subcategorySelect;
   return (
     <Form.Select
       aria-label={label}
@@ -25,7 +27,7 @@ export default function SubcategorySelect({ categories, value, onChange, label, 
       disabled={disabled}
     >
       <option value="" disabled>
-        Pick a subcategory
+        {s.pick}
       </option>
       {categories.map((category) => (
         <optgroup key={category.id} label={category.name}>
@@ -36,7 +38,7 @@ export default function SubcategorySelect({ categories, value, onChange, label, 
           ))}
         </optgroup>
       ))}
-      {onCreateNew && <option value={CREATE_NEW}>+ New subcategory…</option>}
+      {onCreateNew && <option value={CREATE_NEW}>{s.createNew}</option>}
     </Form.Select>
   );
 }

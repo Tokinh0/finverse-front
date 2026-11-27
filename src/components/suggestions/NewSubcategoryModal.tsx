@@ -2,7 +2,9 @@ import { FormEvent, useEffect, useState } from "react";
 import { Alert, Button, Form, Modal } from "react-bootstrap";
 import { ApiError, categoriesApi, subcategoriesApi } from "../../api";
 import type { Category, Subcategory, SubcategoryType } from "../../types";
-import { SUBCATEGORY_TYPES } from "../../utils/categories";
+import { messages } from "../../i18n/locale";
+import { subcategoryTypes } from "../../utils/categories";
+import { useI18n } from "../../i18n/context";
 
 interface Props {
   show: boolean;
@@ -16,7 +18,7 @@ const NEW_CATEGORY = "__new__";
 
 const errorText = (err: unknown) =>
   (err instanceof ApiError ? (err.body as { errors?: string[] } | undefined)?.errors?.join(", ") : undefined) ||
-  "Could not create it. Try again.";
+  messages().suggestions.newSubcategory.error;
 
 /** Creates a subcategory, in an existing category or in a new one, without leaving the page. */
 export default function NewSubcategoryModal({ show, categories, onHide, onCreated }: Props) {
@@ -42,6 +44,8 @@ export default function NewSubcategoryModal({ show, categories, onHide, onCreate
   }, [show, categories]);
 
   const isNewCategory = categoryId === NEW_CATEGORY;
+  const { t } = useI18n();
+  const m = t.suggestions.newSubcategory;
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
@@ -72,7 +76,7 @@ export default function NewSubcategoryModal({ show, categories, onHide, onCreate
     <Modal show={show} onHide={saving ? undefined : onHide} backdrop={saving ? "static" : true} aria-labelledby="new-subcategory-title">
       <Form onSubmit={save}>
         <Modal.Header closeButton={!saving}>
-          <Modal.Title id="new-subcategory-title">New subcategory</Modal.Title>
+          <Modal.Title id="new-subcategory-title">{m.title}</Modal.Title>
         </Modal.Header>
         <Modal.Body className="d-grid gap-3">
           {error && (
@@ -82,21 +86,21 @@ export default function NewSubcategoryModal({ show, categories, onHide, onCreate
           )}
 
           <Form.Group controlId="new-subcategory-category">
-            <Form.Label>Category</Form.Label>
+            <Form.Label>{m.category}</Form.Label>
             <Form.Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} disabled={saving || createdCategory !== null}>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
                 </option>
               ))}
-              <option value={NEW_CATEGORY}>+ New category…</option>
+              <option value={NEW_CATEGORY}>{m.newCategory}</option>
             </Form.Select>
           </Form.Group>
 
           {isNewCategory && (
             <div className="d-flex gap-2 ps-3 border-start">
               <Form.Group controlId="new-category-name" className="flex-grow-1">
-                <Form.Label>New category name</Form.Label>
+                <Form.Label>{m.newCategoryName}</Form.Label>
                 <Form.Control
                   value={createdCategory?.name ?? categoryName}
                   onChange={(e) => setCategoryName(e.target.value)}
@@ -105,7 +109,7 @@ export default function NewSubcategoryModal({ show, categories, onHide, onCreate
                 />
               </Form.Group>
               <Form.Group controlId="new-category-color">
-                <Form.Label>Color</Form.Label>
+                <Form.Label>{m.color}</Form.Label>
                 <Form.Control type="color" value={categoryColor} onChange={(e) => setCategoryColor(e.target.value)} disabled={saving || createdCategory !== null} />
               </Form.Group>
             </div>
@@ -113,33 +117,33 @@ export default function NewSubcategoryModal({ show, categories, onHide, onCreate
 
           <div className="d-flex gap-2">
             <Form.Group controlId="new-subcategory-name" className="flex-grow-1">
-              <Form.Label>Subcategory name</Form.Label>
+              <Form.Label>{m.name}</Form.Label>
               <Form.Control value={name} onChange={(e) => setName(e.target.value)} required disabled={saving} />
             </Form.Group>
             <Form.Group controlId="new-subcategory-color">
-              <Form.Label>Color</Form.Label>
+              <Form.Label>{m.color}</Form.Label>
               <Form.Control type="color" value={color} onChange={(e) => setColor(e.target.value)} disabled={saving} />
             </Form.Group>
           </div>
 
           <Form.Group controlId="new-subcategory-type">
-            <Form.Label>Type</Form.Label>
+            <Form.Label>{m.type}</Form.Label>
             <Form.Select value={type} onChange={(e) => setType(e.target.value as SubcategoryType)} disabled={saving}>
-              {SUBCATEGORY_TYPES.map(([value, label]) => (
+              {subcategoryTypes().map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
               ))}
             </Form.Select>
-            <Form.Text>Reports use it: expenses count as spending, gains as income, investments and transfers apart.</Form.Text>
+            <Form.Text>{m.typeHelp}</Form.Text>
           </Form.Group>
         </Modal.Body>
         <Modal.Footer>
           <Button variant="outline-secondary" onClick={onHide} disabled={saving}>
-            Cancel
+            {t.common.cancel}
           </Button>
           <Button type="submit" variant="dark" disabled={saving || !name.trim() || (isNewCategory && !createdCategory && !categoryName.trim())}>
-            {saving ? "Creating..." : "Create"}
+            {saving ? t.common.creating : t.common.create}
           </Button>
         </Modal.Footer>
       </Form>

@@ -11,10 +11,12 @@ import type { Category, Reapply, RuleSuggestion, SubcategoryRef } from "../../ty
 import { formatIsoDate } from "../../utils/dates";
 import { formatCurrency } from "../../utils/formatter";
 import { amountInputValue, amountRangeLabel, parseAmountRange } from "../../utils/amountRange";
-import { ORIGIN_HELP, confidenceLabel, originLabel, RULE_TITLES } from "../../utils/suggestions";
+import { confidenceLabel, originHelp, originLabel, ruleTitle } from "../../utils/suggestions";
 import AmountRangeFields from "../AmountRangeFields";
 import InfoTip from "./InfoTip";
 import SubcategorySelect from "./SubcategorySelect";
+import { useI18n } from "../../i18n/context";
+import { messages } from "../../i18n/locale";
 
 interface Props {
   suggestion: RuleSuggestion;
@@ -28,7 +30,6 @@ interface Props {
   onNewSubcategory?: (select: (subcategoryId: number) => void) => void;
 }
 
-const HIDDEN = "R$ •••";
 
 const ACTION_ICONS: Record<RuleSuggestion["action"], ReactNode> = {
   create: <AddCircleOutlineOutlined sx={{ fontSize: 14 }} className="me-1" aria-hidden />,
@@ -41,17 +42,16 @@ const subLabel = (sub: SubcategoryRef | null | undefined) => (sub ? `${sub.categ
 /** " (only up to R$ 99,99)" or "" */
 const rangeSuffix = (rule: { min_amount?: number | null; max_amount?: number | null } | null | undefined) => {
   const label = amountRangeLabel(rule?.min_amount, rule?.max_amount);
-  return label ? ` (only ${label})` : "";
+  return label ? messages().amountRange.only(label) : "";
 };
 
-const REAPPLY_OPTIONS: [Reapply, string][] = [
-  ["uncategorized", "Uncategorized transactions"],
-  ["all", "Also transactions other rules matched"],
-  ["none", "Future imports only"],
-];
+const REAPPLY_OPTIONS: Reapply[] = ["uncategorized", "all", "none"];
 
 /** One proposed rule change: the rule, why, how sure, and exactly what it would move. */
 export default function RuleSuggestionCard({ suggestion, guide = false, categories, showTotals, onAccept, onReject, onNewSubcategory }: Props) {
+  const { t } = useI18n();
+  const r = t.suggestions.rule;
+  const tips = t.suggestions.tips;
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(suggestion.proposed?.name ?? "");
   const [subcategoryId, setSubcategoryId] = useState(String(suggestion.proposed?.subcategory?.id ?? ""));
@@ -99,11 +99,11 @@ export default function RuleSuggestionCard({ suggestion, guide = false, categori
           <div data-guide={mark("rule")}>
             <Badge bg="dark" className="me-2">
               {ACTION_ICONS[suggestion.action]}
-              {RULE_TITLES[suggestion.action]}
+              {ruleTitle(suggestion.action)}
             </Badge>
             {suggestion.action === "create" && (
               <span>
-                Descriptions containing <code>{suggestion.proposed?.name}</code>
+                {r.contains} <code>{suggestion.proposed?.name}</code>
                 {rangeSuffix(suggestion.proposed)} → <strong>{subLabel(suggestion.proposed?.subcategory)}</strong>
               </span>
             )}
@@ -116,14 +116,14 @@ export default function RuleSuggestionCard({ suggestion, guide = false, categori
             )}
             {suggestion.action === "delete" && (
               <span>
-                Remove <code>{suggestion.keyword?.name}</code> ({subLabel(suggestion.keyword?.subcategory)})
+                {r.remove} <code>{suggestion.keyword?.name}</code> ({subLabel(suggestion.keyword?.subcategory)})
               </span>
             )}
           </div>
           <div className="small text-nowrap" data-guide={mark("confidence")}>
             {confidenceLabel(suggestion.confidence)}{" "}
-            <InfoTip label="confidence">How likely it is that you'd want this rule.</InfoTip>{" "}
-            <Badge bg={suggestion.origin === "ai" ? "info" : "secondary"} title={ORIGIN_HELP[suggestion.origin]}>
+            <InfoTip label={tips.confidence}>{r.confidenceHelp}</InfoTip>{" "}
+            <Badge bg={suggestion.origin === "ai" ? "info" : "secondary"} title={originHelp(suggestion.origin)}>
               {suggestion.origin === "ai" ? (
                 <AutoAwesomeOutlined sx={{ fontSize: 12 }} className="me-1" aria-hidden />
               ) : (
@@ -143,27 +143,23 @@ export default function RuleSuggestionCard({ suggestion, guide = false, categori
           <div className="small" data-guide={mark("impact")}>
             <VisibilityOutlined sx={{ fontSize: 14 }} className="text-secondary me-1" aria-hidden />
             <span data-testid="rule-impact">
-              Matches {preview.matched} transaction{preview.matched === 1 ? "" : "s"}: {preview.counts.uncategorized} uncategorized,{" "}
-              {preview.counts.keyword} from other rules
-              {preview.counts.kept > 0 && `, ${preview.counts.kept} you categorized yourself (kept as they are)`}.
+              {r.impact(preview.matched, preview.counts.uncategorized, preview.counts.keyword, preview.counts.kept)}
             </span>{" "}
-            <InfoTip label="impact">
-              Worked out by Finverse with your real rules, not by Claude. Transactions you categorized yourself are never moved by a rule.
-            </InfoTip>{" "}
+            <InfoTip label={tips.impact}>{r.impactHelp}</InfoTip>{" "}
             {preview.transactions.length > 0 && (
               <Button variant="link" size="sm" className="p-0 align-baseline" onClick={() => setShowPreview((v) => !v)} aria-expanded={showPreview}>
-                {showPreview ? "Hide" : "Show"} affected transactions
+                {showPreview ? r.hideAffected : r.showAffected}
               </Button>
             )}
             {showPreview && (
               <Table size="sm" responsive className="mt-2 mb-0">
                 <thead>
                   <tr>
-                    <th>Date</th>
-                    <th>Name</th>
-                    <th className="text-end">Amount</th>
-                    <th>Now</th>
-                    <th>After</th>
+                    <th>{r.columns.date}</th>
+                    <th>{r.columns.name}</th>
+                    <th className="text-end">{r.columns.amount}</th>
+                    <th>{r.columns.now}</th>
+                    <th>{r.columns.after}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -172,10 +168,10 @@ export default function RuleSuggestionCard({ suggestion, guide = false, categori
                       <td className="text-nowrap">{formatIsoDate(row.transaction_date)}</td>
                       <td className="text-break">{row.name}</td>
                       <td className="text-end text-nowrap" style={{ fontVariantNumeric: "tabular-nums" }}>
-                        {showTotals ? formatCurrency(row.amount) : HIDDEN}
+                        {showTotals ? formatCurrency(row.amount) : t.common.hiddenAmount}
                       </td>
                       <td>{subLabel(row.from)}</td>
-                      <td>{row.kept ? "Kept (your choice)" : subLabel(row.to)}</td>
+                      <td>{row.kept ? r.kept : subLabel(row.to)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -188,7 +184,7 @@ export default function RuleSuggestionCard({ suggestion, guide = false, categori
           <div className="d-flex flex-wrap gap-2">
             <Form.Control
               size="sm"
-              aria-label="Keyword"
+              aria-label={r.keyword}
               value={name}
               onChange={(e) => setName(e.target.value)}
               style={{ maxWidth: 260 }}
@@ -199,13 +195,13 @@ export default function RuleSuggestionCard({ suggestion, guide = false, categori
                 categories={categories}
                 value={subcategoryId}
                 onChange={setSubcategoryId}
-                label="Rule subcategory"
+                label={r.ruleSubcategory}
                 size="sm"
                 disabled={busy}
                 onCreateNew={onNewSubcategory && (() => onNewSubcategory((id) => setSubcategoryId(String(id))))}
               />
             </div>
-            <span className="small text-muted align-self-center">The preview updates after saving.</span>
+            <span className="small text-muted align-self-center">{r.previewUpdates}</span>
             <div className="w-100">
               <AmountRangeFields
                 idPrefix={`rule-${suggestion.id}-amount`}
@@ -227,19 +223,17 @@ export default function RuleSuggestionCard({ suggestion, guide = false, categori
           <Form.Group className="d-flex flex-wrap align-items-center gap-3 small" data-guide={mark("reapply")}>
             <span className="d-inline-flex align-items-center gap-1">
               <TuneOutlined sx={{ fontSize: 14 }} className="text-secondary" aria-hidden />
-              Apply to:
-              <InfoTip label="apply to">
-                Which existing transactions the accepted rule should categorize now. New imports always use it.
-              </InfoTip>
+              {r.applyTo}
+              <InfoTip label={tips.applyTo}>{r.applyToHelp}</InfoTip>
             </span>
-            {REAPPLY_OPTIONS.map(([value, label]) => (
+            {REAPPLY_OPTIONS.map((value) => (
               <Form.Check
                 key={value}
                 inline
                 type="radio"
                 id={`reapply-${suggestion.id}-${value}`}
                 name={`reapply-${suggestion.id}`}
-                label={label}
+                label={r.reapply[value]}
                 checked={reapply === value}
                 onChange={() => setReapply(value)}
                 disabled={busy}
@@ -250,16 +244,15 @@ export default function RuleSuggestionCard({ suggestion, guide = false, categori
 
         <div className="d-flex flex-wrap gap-2" data-guide={mark("rule-actions")}>
           <Button size="sm" variant="success" disabled={busy} onClick={accept}>
-            {editing ? "Save & accept" : "Accept"}
-            {suggestion.action !== "delete" && moveCount > 0 && !editing ? ` (moves ${moveCount})` : ""}
+            {editing ? r.saveAndAccept : suggestion.action !== "delete" && moveCount > 0 ? r.acceptMoves(moveCount) : t.common.accept}
           </Button>
           {suggestion.action !== "delete" && !editing && (
             <Button size="sm" variant="outline-secondary" disabled={busy} onClick={() => setEditing(true)}>
-              Edit & accept
+              {r.editAndAccept}
             </Button>
           )}
           <Button size="sm" variant="outline-danger" disabled={busy} onClick={() => run(onReject)}>
-            Reject
+            {t.common.reject}
           </Button>
         </div>
       </Card.Body>

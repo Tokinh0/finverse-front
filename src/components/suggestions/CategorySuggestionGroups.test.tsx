@@ -43,8 +43,8 @@ describe("CategorySuggestionGroups", () => {
     renderGroups();
 
     const rows = within(screen.getAllByTestId("merchant-group")[0]).getAllByTestId("suggested-transaction");
-    expect(rows[0]).toHaveTextContent(/09\/03\/2025LANCHONETE EXEMPLOR\$\s?15,00/);
-    expect(rows[1]).toHaveTextContent(/02\/03\/2025LANCHONETE EXEMPLOR\$\s?10,00/);
+    expect(rows[0]).toHaveTextContent(/03\/09\/2025LANCHONETE EXEMPLOR\$\s?15,00/);
+    expect(rows[1]).toHaveTextContent(/03\/02\/2025LANCHONETE EXEMPLOR\$\s?10,00/);
   });
 
   it("lists long merchants partially until expanded", async () => {

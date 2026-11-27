@@ -1,7 +1,8 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useI18n } from "../../i18n/context";
 import type { HealthYear } from "../../types";
 import { formatCurrency } from "../../utils/formatter";
-import { INK, MONTH_NAMES, SERIES_COLORS, compactBRL, delta, formatPct, relativeChange } from "../../utils/health";
+import { INK, SERIES_COLORS, compactBRL, delta, formatPct, monthNames, relativeChange } from "../../utils/health";
 import StatTile, { DeltaText } from "./StatTile";
 
 interface Props {
@@ -10,7 +11,6 @@ interface Props {
   showTotals: boolean;
 }
 
-const HIDDEN = "R$ •••";
 const CURRENT = SERIES_COLORS[0];
 const PREVIOUS = "#9a9a9a"; // de-emphasis gray: last year is context, this year is the subject
 
@@ -22,6 +22,7 @@ interface TooltipProps {
 }
 
 function YearTooltip({ active, label, payload, showTotals }: TooltipProps) {
+  const { t } = useI18n();
   if (!active || !payload?.length) return null;
   return (
     <div className="health-tooltip">
@@ -33,7 +34,7 @@ function YearTooltip({ active, label, payload, showTotals }: TooltipProps) {
             {p.name}
           </span>
           <span style={{ fontVariantNumeric: "tabular-nums" }}>
-            {p.value === null || p.value === undefined ? "no data" : showTotals ? formatCurrency(p.value) : HIDDEN}
+            {p.value === null || p.value === undefined ? t.health.noData : showTotals ? formatCurrency(p.value) : t.common.hiddenAmount}
           </span>
         </div>
       ))}
@@ -42,8 +43,11 @@ function YearTooltip({ active, label, payload, showTotals }: TooltipProps) {
 }
 
 export default function YearSummary({ year, colors, showTotals }: Props) {
-  const money = (value: number) => (showTotals ? formatCurrency(value) : HIDDEN);
-  const throughLabel = year.compared_through_month < 12 ? `Jan–${MONTH_NAMES[year.compared_through_month - 1]} ${year.previous_year}` : `${year.previous_year}`;
+  const { t } = useI18n();
+  const h = t.health;
+  const MONTH_NAMES = monthNames();
+  const money = (value: number) => (showTotals ? formatCurrency(value) : t.common.hiddenAmount);
+  const throughLabel = year.compared_through_month < 12 ? h.janThrough(MONTH_NAMES[year.compared_through_month - 1], year.previous_year) : `${year.previous_year}`;
   const previous = year.previous_totals;
   const data = year.monthly.map((m) => ({
     month: MONTH_NAMES[m.month - 1],
@@ -65,45 +69,45 @@ export default function YearSummary({ year, colors, showTotals }: Props) {
       );
     };
 
-  if (year.months_with_data === 0) return <p className="health-sub">No transactions in {year.year}.</p>;
+  if (year.months_with_data === 0) return <p className="health-sub">{h.noTransactionsIn(year.year)}</p>;
 
   return (
     <div className="health-grid">
       <div className="health-tiles">
         <StatTile
-          label="Spending"
+          label={h.spending}
           value={money(year.totals.expenses)}
           delta={previous ? delta(relativeChange(year.totals.expenses, previous.expenses), false) : undefined}
-          comparison={previous ? `vs ${throughLabel}` : undefined}
+          comparison={previous ? h.versus(throughLabel) : undefined}
         />
         <StatTile
-          label="Income"
+          label={h.income}
           value={money(year.totals.income)}
           delta={previous ? delta(relativeChange(year.totals.income, previous.income), true) : undefined}
-          comparison={previous ? `vs ${throughLabel}` : undefined}
+          comparison={previous ? h.versus(throughLabel) : undefined}
         />
-        <StatTile label="Net (income − spending)" value={money(year.totals.net)} />
-        <StatTile label="Savings rate" value={formatPct(year.totals.savings_rate)} hint={previous ? `${formatPct(previous.savings_rate)} in ${throughLabel}` : undefined} />
+        <StatTile label={h.net} value={money(year.totals.net)} />
+        <StatTile label={h.savingsRate} value={formatPct(year.totals.savings_rate)} hint={previous ? h.inPeriod(formatPct(previous.savings_rate), throughLabel) : undefined} />
         {year.best_month && (
-          <StatTile label="Best month" value={MONTH_NAMES[year.best_month.month - 1]} hint={showTotals ? `Net ${formatCurrency(year.best_month.net)}` : "Highest net"} />
+          <StatTile label={h.bestMonth} value={MONTH_NAMES[year.best_month.month - 1]} hint={showTotals ? h.netAmount(formatCurrency(year.best_month.net)) : h.highestNet} />
         )}
         {year.worst_month && (
-          <StatTile label="Worst month" value={MONTH_NAMES[year.worst_month.month - 1]} hint={showTotals ? `Net ${formatCurrency(year.worst_month.net)}` : "Lowest net"} />
+          <StatTile label={h.worstMonth} value={MONTH_NAMES[year.worst_month.month - 1]} hint={showTotals ? h.netAmount(formatCurrency(year.worst_month.net)) : h.lowestNet} />
         )}
       </div>
 
       <div>
-        <div className="health-legend mb-2" aria-label="Legend">
+        <div className="health-legend mb-2" aria-label={t.common.legend}>
           <span>
             <span className="health-swatch" style={{ background: CURRENT }} />
-            {year.year} spending
+            {h.spendingOf(year.year)}
           </span>
           <span>
             <span className="health-swatch" style={{ background: PREVIOUS }} />
-            {year.previous_year} spending
+            {h.spendingOf(year.previous_year)}
           </span>
         </div>
-        <div style={{ width: "100%", height: 260 }} role="img" aria-label={`Monthly spending in ${year.year} compared with ${year.previous_year}`}>
+        <div style={{ width: "100%", height: 260 }} role="img" aria-label={h.monthlySpending(year.year, year.previous_year)}>
           <ResponsiveContainer>
             <LineChart data={data} margin={{ top: 8, right: 48, bottom: 0, left: 8 }}>
               <CartesianGrid vertical={false} stroke={INK.grid} />
@@ -141,14 +145,14 @@ export default function YearSummary({ year, colors, showTotals }: Props) {
         <div className="health-table-wrap">
           <table className="health-table">
             <caption className="text-start fw-semibold text-body pb-2" style={{ captionSide: "top" }}>
-              Spending by category
+              {h.spendingByCategory}
             </caption>
             <thead>
               <tr>
-                <th>Category</th>
+                <th>{h.category}</th>
                 <th className="num">{year.year}</th>
                 <th className="num">{throughLabel}</th>
-                <th className="num">Change</th>
+                <th className="num">{h.change}</th>
               </tr>
             </thead>
             <tbody>
@@ -176,13 +180,13 @@ export default function YearSummary({ year, colors, showTotals }: Props) {
         <div className="health-table-wrap">
           <table className="health-table">
             <caption className="text-start fw-semibold text-body pb-2" style={{ captionSide: "top" }}>
-              Top merchants
+              {h.topMerchants}
             </caption>
             <thead>
               <tr>
-                <th>Merchant</th>
-                <th className="num">Charges</th>
-                <th className="num">Total</th>
+                <th>{h.merchant}</th>
+                <th className="num">{h.charges}</th>
+                <th className="num">{t.common.total}</th>
               </tr>
             </thead>
             <tbody>

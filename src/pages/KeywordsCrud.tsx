@@ -4,6 +4,9 @@ import { Link } from "react-router-dom";
 import { keywordsApi, subcategoriesApi } from "../api";
 import AmountRangeFields from "../components/AmountRangeFields";
 import { Loading } from "../components/LoadingState";
+import { useI18n } from "../i18n/context";
+import { messages } from "../i18n/locale";
+import type { Messages } from "../i18n/en";
 import type { Keyword, KeywordHealth, KeywordHealthFlag, Subcategory } from "../types";
 import { amountInputValue, amountRangeLabel, parseAmountRange } from "../utils/amountRange";
 
@@ -13,19 +16,13 @@ const EMPTY_FORM: FormState = { name: "", subcategory_id: "", min_amount: "", ma
 
 const errorMessage = (err: unknown, fallback: string) => (err instanceof Error ? err.message : fallback);
 
-const FLAG_STYLES: Record<KeywordHealthFlag, { bg: string; label: (h: KeywordHealth) => string; hint: string }> = {
-  overridden: {
-    bg: "danger",
-    label: (h) => `Overridden ${h.overrides}×`,
-    hint: "You often move transactions this rule matched to another subcategory.",
-  },
-  overlapping: {
-    bg: "warning",
-    label: () => "Overlaps",
-    hint: "Ties with a rule for another subcategory on some transactions; which one wins depends on rule order.",
-  },
-  unused: { bg: "secondary", label: () => "Never matches", hint: "No transaction is categorized by this rule." },
-};
+const FLAG_BADGES: Record<KeywordHealthFlag, string> = { overridden: "danger", overlapping: "warning", unused: "secondary" };
+
+function flagText(flag: KeywordHealthFlag, health: KeywordHealth, t: Messages["keywords"]) {
+  if (flag === "overridden") return { label: t.overridden(health.overrides), hint: t.overridenHint };
+  if (flag === "overlapping") return { label: t.overlaps, hint: t.overlapsHint };
+  return { label: t.neverMatches, hint: t.neverMatchesHint };
+}
 
 export default function KeywordsCrud() {
   const [keywords, setKeywords] = useState<Keyword[]>([]);
@@ -38,6 +35,8 @@ export default function KeywordsCrud() {
   const [formData, setFormData] = useState<FormState>(EMPTY_FORM);
   const [health, setHealth] = useState<Map<number, KeywordHealth>>(new Map());
   const [needsAttention, setNeedsAttention] = useState(false);
+  const { t } = useI18n();
+  const k = t.keywords;
 
   const subcategoryNames = useMemo(() => new Map(subcategories.map((s) => [s.id, s.name])), [subcategories]);
 
@@ -50,7 +49,7 @@ export default function KeywordsCrud() {
       setSubcategories(subcategoriesData);
     } catch (err) {
       console.error(err);
-      setError(errorMessage(err, "Unexpected error loading data."));
+      setError(errorMessage(err, messages().keywords.loadError));
     } finally {
       setLoading(false);
     }
@@ -95,21 +94,21 @@ export default function KeywordsCrud() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm("Are you sure you want to delete this keyword?")) return;
+    if (!window.confirm(k.confirmDelete)) return;
 
     try {
       await keywordsApi.remove(id);
       setKeywords((prev) => prev.filter((keyword) => keyword.id !== id));
     } catch (err) {
       console.error(err);
-      alert(errorMessage(err, "Unexpected error deleting keyword."));
+      alert(errorMessage(err, k.deleteFailed));
     }
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.subcategory_id) {
-      alert("Please fill in all fields");
+      alert(k.fillAll);
       return;
     }
 
@@ -128,26 +127,26 @@ export default function KeywordsCrud() {
       setFormData(EMPTY_FORM);
     } catch (err) {
       console.error(err);
-      alert(editingKeyword ? "Failed to update keyword" : "Failed to create keyword");
+      alert(editingKeyword ? k.updateFailed : k.createFailed);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const subcategoryName = (keyword: Keyword) =>
-    keyword.subcategory?.name ?? subcategoryNames.get(keyword.subcategory_id) ?? "Unknown";
+    keyword.subcategory?.name ?? subcategoryNames.get(keyword.subcategory_id) ?? k.unknownSubcategory;
 
-  if (loading) return <Loading message="Loading keywords..." />;
+  if (loading) return <Loading message={k.loading} />;
 
   if (error) {
     return (
       <Container className="mt-4">
         <Alert variant="danger">
-          <p className="fw-medium mb-1">Unable to load keywords.</p>
+          <p className="fw-medium mb-1">{k.loadFailedTitle}</p>
           <p className="mb-0">{error}</p>
         </Alert>
         <Button variant="outline-secondary" onClick={loadData}>
-          Try again
+          {t.common.tryAgain}
         </Button>
       </Container>
     );
@@ -156,25 +155,25 @@ export default function KeywordsCrud() {
   return (
     <Container className="mt-4">
       <div className="mb-4 d-flex align-items-center justify-content-between border rounded p-3">
-        <h2 className="mb-0">Keywords Management</h2>
+        <h2 className="mb-0">{k.title}</h2>
         <Button variant="outline-dark" onClick={() => openDialog(null)}>
-          + Add Keyword
+          {k.add}
         </Button>
       </div>
 
       <Modal show={isDialogOpen} onHide={closeDialog} backdrop={isSubmitting ? "static" : true}>
         <Form onSubmit={handleSubmit}>
           <Modal.Header closeButton={!isSubmitting}>
-            <Modal.Title>{editingKeyword ? "Edit Keyword" : "Add New Keyword"}</Modal.Title>
+            <Modal.Title>{editingKeyword ? k.editTitle : k.newTitle}</Modal.Title>
           </Modal.Header>
           <Modal.Body>
             <p className="text-muted">
-              {editingKeyword ? "Update the keyword details below." : "Fill in the details to create a new keyword."}
+              {editingKeyword ? k.editDescription : k.newDescription}
             </p>
             <Form.Group className="mb-3" controlId="keyword-name">
-              <Form.Label>Keyword Name</Form.Label>
+              <Form.Label>{k.name}</Form.Label>
               <Form.Control
-                placeholder="Enter keyword name"
+                placeholder={k.namePlaceholder}
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
@@ -182,7 +181,7 @@ export default function KeywordsCrud() {
               />
             </Form.Group>
             <Form.Group controlId="keyword-subcategory">
-              <Form.Label>Subcategory</Form.Label>
+              <Form.Label>{k.subcategory}</Form.Label>
               <Form.Select
                 value={formData.subcategory_id}
                 onChange={(e) => setFormData({ ...formData, subcategory_id: e.target.value })}
@@ -190,7 +189,7 @@ export default function KeywordsCrud() {
                 disabled={isSubmitting}
               >
                 <option value="" disabled>
-                  Select a subcategory
+                  {k.selectSubcategory}
                 </option>
                 {subcategories.map((subcategory) => (
                   <option key={subcategory.id} value={subcategory.id}>
@@ -211,10 +210,10 @@ export default function KeywordsCrud() {
           </Modal.Body>
           <Modal.Footer>
             <Button variant="outline-secondary" onClick={closeDialog} disabled={isSubmitting}>
-              Cancel
+              {t.common.cancel}
             </Button>
             <Button type="submit" variant="dark" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : editingKeyword ? "Update Keyword" : "Add Keyword"}
+              {isSubmitting ? t.common.saving : editingKeyword ? k.update : k.addButton}
             </Button>
           </Modal.Footer>
         </Form>
@@ -225,7 +224,7 @@ export default function KeywordsCrud() {
           <Form.Check
             type="switch"
             id="keywords-needs-attention"
-            label={`Needs attention (${attentionCount})`}
+            label={k.needsAttention(attentionCount)}
             checked={needsAttention}
             onChange={(e) => setNeedsAttention(e.target.checked)}
           />
@@ -235,19 +234,19 @@ export default function KeywordsCrud() {
       <Table bordered hover responsive>
         <thead>
           <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Subcategory</th>
-            <th>Amounts</th>
-            <th>Health</th>
-            <th className="text-end">Actions</th>
+            <th>{k.columns.id}</th>
+            <th>{k.columns.name}</th>
+            <th>{k.columns.subcategory}</th>
+            <th>{k.columns.amounts}</th>
+            <th>{k.columns.health}</th>
+            <th className="text-end">{k.columns.actions}</th>
           </tr>
         </thead>
         <tbody>
           {visibleKeywords.length === 0 ? (
             <tr>
               <td colSpan={6} className="text-center text-muted">
-                {needsAttention ? "Every rule looks healthy." : "No keywords found. Add one to get started."}
+                {needsAttention ? k.allHealthy : k.empty}
               </td>
             </tr>
           ) : (
@@ -256,17 +255,17 @@ export default function KeywordsCrud() {
                 <td className="fw-medium">{keyword.id}</td>
                 <td>{keyword.name}</td>
                 <td>{subcategoryName(keyword)}</td>
-                <td className="text-nowrap small">{amountRangeLabel(keyword.min_amount, keyword.max_amount) || <span className="text-muted">Any</span>}</td>
+                <td className="text-nowrap small">{amountRangeLabel(keyword.min_amount, keyword.max_amount) || <span className="text-muted">{t.common.any}</span>}</td>
                 <td data-testid={`health-${keyword.id}`}>
                   <HealthCell health={health.get(keyword.id)} />
                 </td>
                 <td>
                   <div className="d-flex justify-content-end gap-2">
                     <Button size="sm" variant="outline-secondary" onClick={() => openDialog(keyword)}>
-                      Edit
+                      {t.common.edit}
                     </Button>
                     <Button size="sm" variant="outline-danger" onClick={() => handleDelete(keyword.id)}>
-                      Delete
+                      {t.common.delete}
                     </Button>
                   </div>
                 </td>
@@ -280,16 +279,20 @@ export default function KeywordsCrud() {
 }
 
 function HealthCell({ health }: { health?: KeywordHealth }) {
+  const k = useI18n().t.keywords;
   if (!health) return null;
   return (
     <div className="d-flex flex-wrap align-items-center gap-1 small">
-      <span className="text-muted">{health.matches} match{health.matches === 1 ? "" : "es"}</span>
-      {health.flags.map((flag) => (
-        <Badge key={flag} bg={FLAG_STYLES[flag].bg} text={flag === "overlapping" ? "dark" : undefined} title={FLAG_STYLES[flag].hint}>
-          {FLAG_STYLES[flag].label(health)}
-        </Badge>
-      ))}
-      {health.pending_suggestion_ids.length > 0 && <Link to="/suggestions?tab=rules">Suggested fix →</Link>}
+      <span className="text-muted">{k.matches(health.matches)}</span>
+      {health.flags.map((flag) => {
+        const { label, hint } = flagText(flag, health, k);
+        return (
+          <Badge key={flag} bg={FLAG_BADGES[flag]} text={flag === "overlapping" ? "dark" : undefined} title={hint}>
+            {label}
+          </Badge>
+        );
+      })}
+      {health.pending_suggestion_ids.length > 0 && <Link to="/suggestions?tab=rules">{k.suggestedFix}</Link>}
     </div>
   );
 }

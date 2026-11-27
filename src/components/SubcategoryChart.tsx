@@ -1,5 +1,7 @@
 import { useId, useState } from "react";
 import { Bar, BarChart, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useI18n } from "../i18n/context";
+import { getLocale } from "../i18n/locale";
 import type { SubcategoryReportEntry } from "../types";
 import { renderCustomPieLabel } from "../utils/chartHelper";
 import { colorAt, formatBRL } from "../utils/colors";
@@ -25,7 +27,14 @@ const parseBrDate = (date: string) => {
   return new Date(year, month - 1, day).getTime();
 };
 
+// "dd/mm/yyyy" -> "mm/dd/yyyy" in English
+const displayDate = (date: string) => {
+  const [day, month, year] = date.split("/");
+  return getLocale() === "en" && year ? `${month}/${day}/${year}` : date;
+};
+
 export function SubcategoryTooltip({ active, payload, showTotals }: TooltipProps) {
+  const total = useI18n().t.common.total;
   if (!active || !payload?.length) return null;
 
   const data = payload[0].payload;
@@ -57,7 +66,7 @@ export function SubcategoryTooltip({ active, payload, showTotals }: TooltipProps
       </p>
       {showTotals && (
         <p style={{ margin: "0 0 8px 0" }}>
-          <strong>R$ {data.total.toFixed(2)} - Total</strong>
+          <strong>R$ {data.total.toFixed(2)} - {total}</strong>
         </p>
       )}
       <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none", overflowY: "auto", flex: 1, minHeight: 0 }}>
@@ -66,7 +75,7 @@ export function SubcategoryTooltip({ active, payload, showTotals }: TooltipProps
             key={idx}
             style={{ overflowWrap: "anywhere", marginBottom: "4px", color: amountColor(t.amount) }}
           >
-            {t.transaction_date} - R$ {showTotals ? t.amount.toFixed(2) : "-"} - {t.name.replace(/\s+/g, " ").trim()}
+            {displayDate(t.transaction_date)} - R$ {showTotals ? t.amount.toFixed(2) : "-"} - {t.name.replace(/\s+/g, " ").trim()}
           </li>
         ))}
       </ul>
@@ -77,11 +86,12 @@ export function SubcategoryTooltip({ active, payload, showTotals }: TooltipProps
 export default function SubcategoryChart({ data, showTotals }: Props) {
   const [chartType, setChartType] = useState<ChartType>("pie");
   const selectId = useId();
+  const { t } = useI18n();
 
-  if (!Array.isArray(data)) return <p>Invalid data</p>;
+  if (!Array.isArray(data)) return <p>{t.charts.invalidData}</p>;
 
   const chartData = data.map((entry) => ({ ...entry, total: Number(entry.total) }));
-  if (!chartData.length) return <p style={{ marginTop: "50%" }}>No data to display.</p>;
+  if (!chartData.length) return <p style={{ marginTop: "50%" }}>{t.charts.noData}</p>;
 
   return (
     <div>

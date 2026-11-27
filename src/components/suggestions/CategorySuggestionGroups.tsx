@@ -8,9 +8,10 @@ import { Badge, Button, Card, Form } from "react-bootstrap";
 import type { Category, CategorySuggestion } from "../../types";
 import { formatIsoDate } from "../../utils/dates";
 import { formatCurrency } from "../../utils/formatter";
-import { ORIGIN_HELP, confidenceLabel, groupByMerchant, originLabel } from "../../utils/suggestions";
+import { confidenceLabel, groupByMerchant, originHelp, originLabel } from "../../utils/suggestions";
 import InfoTip from "./InfoTip";
 import SubcategorySelect from "./SubcategorySelect";
+import { useI18n } from "../../i18n/context";
 
 interface Props {
   suggestions: CategorySuggestion[];
@@ -27,7 +28,6 @@ interface Props {
 }
 
 const THRESHOLDS = [0.95, 0.9, 0.8, 0.7];
-const HIDDEN = "R$ •••";
 /** transactions listed per merchant before "+N more" */
 const MAX_LISTED = 6;
 
@@ -49,6 +49,10 @@ export default function CategorySuggestionGroups({
   const [changeTo, setChangeTo] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const groups = useMemo(() => groupByMerchant(suggestions), [suggestions]);
+  const { t } = useI18n();
+  const g = t.suggestions.groups;
+  const tips = t.suggestions.tips;
+  const HIDDEN = t.common.hiddenAmount;
   const aboveThreshold = suggestions.filter((s) => s.confidence >= threshold).length;
   const money = (value: number) => (showTotals ? formatCurrency(value) : HIDDEN);
 
@@ -63,15 +67,15 @@ export default function CategorySuggestionGroups({
   };
 
   if (suggestions.length === 0) {
-    return <p className="text-muted my-4 text-center">No transaction suggestions to review.</p>;
+    return <p className="text-muted my-4 text-center">{g.empty}</p>;
   }
 
   return (
     <div className="d-grid gap-3">
       <div className="d-flex flex-wrap align-items-center gap-2 border rounded p-2 bg-light" data-testid="bulk-bar" data-guide="bulk-bar">
         <DoneAllOutlined fontSize="small" className="text-secondary" aria-hidden />
-        <span className="small">Accept every suggestion with confidence of at least</span>
-        <Form.Select size="sm" aria-label="Minimum confidence" style={{ width: "auto" }} value={threshold} onChange={(e) => setThreshold(Number(e.target.value))}>
+        <span className="small">{g.bulkLabel}</span>
+        <Form.Select size="sm" aria-label={g.minimumConfidence} style={{ width: "auto" }} value={threshold} onChange={(e) => setThreshold(Number(e.target.value))}>
           {THRESHOLDS.map((value) => (
             <option key={value} value={value}>
               {confidenceLabel(value)}
@@ -79,9 +83,9 @@ export default function CategorySuggestionGroups({
           ))}
         </Form.Select>
         <Button size="sm" variant="success" disabled={aboveThreshold === 0 || busyKey !== null} onClick={() => run("bulk", () => acceptAll(threshold))}>
-          Accept {aboveThreshold}
+          {g.acceptCount(aboveThreshold)}
         </Button>
-        <InfoTip label="bulk accept">Accepts every pending suggestion at or above this confidence, across all months, in one go.</InfoTip>
+        <InfoTip label={tips.bulk}>{g.bulkHelp}</InfoTip>
       </div>
 
       {groups.map((group, index) => {
@@ -108,7 +112,7 @@ export default function CategorySuggestionGroups({
                     {first.transaction?.name ?? group.merchantKey}
                   </div>
                   <div className="small text-muted">
-                    {group.suggestions.length} transaction{group.suggestions.length === 1 ? "" : "s"} · total {money(total)}
+                    {g.totalLine(t.common.transactions(group.suggestions.length), money(total))}
                   </div>
                 </div>
                 <div className="text-end">
@@ -121,9 +125,9 @@ export default function CategorySuggestionGroups({
                   </span>{" "}
                   <span className="small text-nowrap" data-guide={guide("confidence")}>
                     {confidenceLabel(first.confidence)}{" "}
-                    <InfoTip label="confidence">How likely it is that you'd pick this subcategory. Higher is safer to accept in bulk.</InfoTip>
+                    <InfoTip label={tips.confidence}>{g.confidenceHelp}</InfoTip>
                   </span>{" "}
-                  <Badge bg={first.origin === "ai" ? "info" : "secondary"} title={ORIGIN_HELP[first.origin]} data-guide={guide("origin")}>
+                  <Badge bg={first.origin === "ai" ? "info" : "secondary"} title={originHelp(first.origin)} data-guide={guide("origin")}>
                     {first.origin === "ai" ? (
                       <AutoAwesomeOutlined sx={{ fontSize: 12 }} className="me-1" aria-hidden />
                     ) : (
@@ -139,7 +143,7 @@ export default function CategorySuggestionGroups({
                 </div>
               </div>
 
-              <ul className="list-unstyled small mb-0 mt-2 border-top pt-1" aria-label={`Transactions from ${first.transaction?.name ?? group.merchantKey}`} data-guide={guide("transactions")}>
+              <ul className="list-unstyled small mb-0 mt-2 border-top pt-1" aria-label={g.transactionsFrom(first.transaction?.name ?? group.merchantKey)} data-guide={guide("transactions")}>
                 {listed.map((s) => (
                   <li key={s.id} className="d-flex gap-3" data-testid="suggested-transaction">
                     <span className="text-muted text-nowrap" style={{ fontVariantNumeric: "tabular-nums" }}>
@@ -169,7 +173,7 @@ export default function CategorySuggestionGroups({
                     })
                   }
                 >
-                  {isExpanded ? "Show fewer" : `Show ${transactions.length - MAX_LISTED} more`}
+                  {isExpanded ? g.showFewer : g.showMore(transactions.length - MAX_LISTED)}
                 </Button>
               )}
 
@@ -180,23 +184,23 @@ export default function CategorySuggestionGroups({
                       categories={categories}
                       value={changeTo}
                       onChange={setChangeTo}
-                      label="Move to"
+                      label={g.moveTo}
                       size="sm"
                       disabled={busy}
                       onCreateNew={onNewSubcategory && (() => onNewSubcategory((id) => setChangeTo(String(id))))}
                     />
                   </div>
                   <Button size="sm" variant="dark" disabled={!changeTo || busy} onClick={() => run(key, () => acceptAs(group.suggestions, Number(changeTo)))}>
-                    Move {group.suggestions.length}
+                    {g.moveCount(group.suggestions.length)}
                   </Button>
                   <Button size="sm" variant="outline-secondary" disabled={busy} onClick={() => setChanging(null)}>
-                    Cancel
+                    {t.common.cancel}
                   </Button>
                 </div>
               ) : (
                 <div className="d-flex flex-wrap gap-2 mt-2" data-guide={guide("actions")}>
                   <Button size="sm" variant="outline-success" disabled={busy} onClick={() => run(key, () => acceptMerchant(group.merchantKey))}>
-                    Accept{group.suggestions.length > 1 ? ` all ${group.suggestions.length}` : ""}
+                    {g.acceptAll(group.suggestions.length)}
                   </Button>
                   <Button
                     size="sm"
@@ -207,21 +211,18 @@ export default function CategorySuggestionGroups({
                       setChanging(key);
                     }}
                   >
-                    Change…
+                    {g.change}
                   </Button>
                   <Button size="sm" variant="outline-danger" disabled={busy} onClick={() => run(key, () => reject(group.suggestions))}>
-                    Reject
+                    {t.common.reject}
                   </Button>
                   {dontKnow && (
                     <>
                       <Button size="sm" variant="outline-secondary" disabled={busy} onClick={() => run(key, () => dontKnow(group.suggestions))}>
                         <QuestionMarkOutlined sx={{ fontSize: 14 }} className="me-1" aria-hidden />
-                        No idea
+                        {g.noIdea}
                       </Button>
-                      <InfoTip label="no idea">
-                        For transactions you can't remember. They stay in Outros, get a "Can't remember" mark and no more suggestions.
-                        This isn't a rejection, so it doesn't affect future suggestions for this merchant.
-                      </InfoTip>
+                      <InfoTip label={tips.noIdea}>{g.noIdeaHelp}</InfoTip>
                     </>
                   )}
                 </div>

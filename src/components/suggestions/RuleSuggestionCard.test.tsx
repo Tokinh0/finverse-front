@@ -33,7 +33,7 @@ describe("RuleSuggestionCard", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Show affected transactions" }));
     const rows = within(screen.getByRole("table")).getAllByRole("row");
-    expect(rows[1]).toHaveTextContent("02/03/2025UBER TRIP SPR$ •••Outros / OutrosTransporte / Uber");
+    expect(rows[1]).toHaveTextContent("03/02/2025UBER TRIP SPR$ •••Outros / OutrosTransporte / Uber");
     expect(rows[2]).toHaveTextContent("Kept (your choice)");
     expect(screen.queryByText(/25,50/)).not.toBeInTheDocument();
   });

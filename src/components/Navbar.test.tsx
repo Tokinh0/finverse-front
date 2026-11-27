@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { SuggestionsSummaryContext } from "../hooks/suggestionsSummary";
 import { suggestionRun, suggestionsSummary } from "../test/fixtures";
 import AppNavbar from "./Navbar";
+import { inLocale } from "../test/i18n";
 
 describe("AppNavbar", () => {
   it("links to every page and toggles totals", async () => {
@@ -47,5 +48,19 @@ describe("AppNavbar", () => {
     );
 
     expect(screen.queryByTestId("suggestions-badge")).not.toBeInTheDocument();
+  });
+
+  it("is shown in Portuguese when that is the language", () => {
+    render(
+      inLocale(
+        "pt-BR",
+        <MemoryRouter>
+          <AppNavbar showTotals={false} setShowTotals={vi.fn()} />
+        </MemoryRouter>
+      )
+    );
+
+    expect(screen.getByRole("link", { name: "Transações" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Configurações" })).toHaveAttribute("href", "/settings");
   });
 });

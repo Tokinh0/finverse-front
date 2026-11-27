@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { isRunActive } from "../../hooks/suggestionsSummary";
 import type { SuggestionsSummary } from "../../types";
 import { runProblem } from "../../utils/suggestions";
+import { useI18n } from "../../i18n/context";
 
 interface Props {
   summary: SuggestionsSummary | null;
@@ -15,13 +16,14 @@ export default function RunStatus({ summary, starting, onSuggestAgain }: Props) 
   const run = summary?.latest_run;
   const active = isRunActive(summary);
   const problem = runProblem(run);
+  const r = useI18n().t.suggestions.run;
 
   return (
     <div className="d-grid gap-2 mb-3">
       {!summary?.claude_configured && (
         <Alert variant="light" className="border mb-0 small">
-          Suggestions come from your own history only. <Link to="/settings">Add a Claude API key</Link> to also get suggestions for
-          merchants you haven't categorized before.
+          {r.noKeyBefore} <Link to="/settings">{r.noKeyLink}</Link>
+          {r.noKeyAfter}
         </Alert>
       )}
       {problem && (
@@ -33,19 +35,17 @@ export default function RunStatus({ summary, starting, onSuggestAgain }: Props) 
         {active ? (
           <span className="text-muted" data-testid="run-active">
             <Spinner size="sm" className="me-2" />
-            Generating suggestions…
+            {r.generating}
           </span>
         ) : (
           run?.finished_at && (
             <span className="text-muted small">
-              Last run: {run.history_suggestions_count} from your history, {run.ai_suggestions_count} from Claude
-              {run.ai_requests_count > 0 && ` (${run.ai_requests_count} request${run.ai_requests_count === 1 ? "" : "s"})`},{" "}
-              {run.rule_suggestions_count} rule idea{run.rule_suggestions_count === 1 ? "" : "s"}.
+              {r.last(run.history_suggestions_count, run.ai_suggestions_count, run.ai_requests_count, run.rule_suggestions_count)}
             </span>
           )
         )}
         <Button size="sm" variant="outline-dark" className="ms-auto" disabled={active || starting} onClick={onSuggestAgain}>
-          {starting ? "Starting..." : "Suggest again"}
+          {starting ? r.starting : r.suggestAgain}
         </Button>
       </div>
     </div>

@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router-dom";
 import AppNavbar from "./components/Navbar";
 import { SuggestionsSummaryContext, useSuggestionsSummaryState } from "./hooks/suggestionsSummary";
 import { usePersistentToggle } from "./hooks/usePersistentToggle";
+import I18nProvider from "./i18n/I18nProvider";
 import ChargeAlerts from "./pages/ChargeAlerts";
 import CategorySubcategoryManager from "./pages/CategorySubcategoryManager";
 import Dashboard from "./pages/Dashboard";
@@ -16,6 +17,14 @@ import MonthlyByCategory from "./pages/reports/MonthlyByCategory";
 import MonthlyBySubcategory from "./pages/reports/MonthlyBySubcategory";
 
 export default function App() {
+  return (
+    <I18nProvider>
+      <AppRoutes />
+    </I18nProvider>
+  );
+}
+
+function AppRoutes() {
   // Global privacy toggle: when false, amounts are hidden. Saved in the browser, and changed
   // only by the switch in the navbar.
   const [showTotals, setShowTotals] = usePersistentToggle("finverse.showTotals", false);

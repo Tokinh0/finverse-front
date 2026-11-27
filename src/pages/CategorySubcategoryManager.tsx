@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { categoriesApi, subcategoriesApi } from "../api";
 import type { Category, Subcategory } from "../types";
-import { SUBCATEGORY_TYPES } from "../utils/categories";
+import { useI18n } from "../i18n/context";
+import { subcategoryTypes } from "../utils/categories";
 
 // Rows added in the UI get a negative temporary id until the API returns the real one.
 let nextTempId = -1;
@@ -11,6 +12,8 @@ const isNew = (record: { id: number }) => record.id < 0;
 export default function CategorySubcategoryManager() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const { t } = useI18n();
+  const c = t.categoryManager;
 
   useEffect(() => {
     categoriesApi
@@ -84,17 +87,17 @@ export default function CategorySubcategoryManager() {
     }
   };
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) return <p>{t.common.loading}</p>;
 
   return (
     <div style={{ padding: "1rem", maxWidth: "600px", margin: "0 auto" }}>
-      <h2>Category/Subcategory Manager</h2>
+      <h2>{c.title}</h2>
       {categories.map((category) => (
         <div key={category.id} style={{ marginBottom: "1.5rem", marginLeft: "6rem", marginTop: "3rem" }}>
           <div className="mb-3">
             <div className="d-flex align-items-center gap-2 mb-1">
               <input
-                aria-label="Category name"
+                aria-label={c.categoryName}
                 className="form-control form-control-sm w-50"
                 type="text"
                 value={category.name ?? ""}
@@ -102,7 +105,7 @@ export default function CategorySubcategoryManager() {
                 onBlur={() => saveCategory(category)}
               />
               <input
-                aria-label="Category color"
+                aria-label={c.categoryColor}
                 className="form-control form-control-color"
                 type="color"
                 value={category.color_code ?? "#000000"}
@@ -110,14 +113,14 @@ export default function CategorySubcategoryManager() {
                 onBlur={() => saveCategory(category)}
               />
               <button className="btn btn-outline-primary btn-sm" onClick={() => addSubcategory(category.id)} disabled={isNew(category)}>
-                + Subcategory
+                {c.addSubcategory}
               </button>
             </div>
 
             {category.subcategories.map((sub) => (
               <div key={sub.id} className="ms-4 d-flex align-items-center gap-2 mb-1">
                 <input
-                  aria-label="Subcategory name"
+                  aria-label={c.subcategoryName}
                   className="form-control form-control-sm w-50"
                   type="text"
                   value={sub.name ?? ""}
@@ -125,7 +128,7 @@ export default function CategorySubcategoryManager() {
                   onBlur={() => saveSubcategory(sub, category.id)}
                 />
                 <input
-                  aria-label="Subcategory color"
+                  aria-label={c.subcategoryColor}
                   className="form-control form-control-color"
                   type="color"
                   value={sub.color_code ?? "#cccccc"}
@@ -133,7 +136,7 @@ export default function CategorySubcategoryManager() {
                   onBlur={() => saveSubcategory(sub, category.id)}
                 />
                 <select
-                  aria-label="Subcategory type"
+                  aria-label={c.subcategoryType}
                   className="form-select form-select-sm w-auto"
                   value={sub.subcategory_type ?? ""}
                   onChange={(e) =>
@@ -142,9 +145,9 @@ export default function CategorySubcategoryManager() {
                   onBlur={() => saveSubcategory(sub, category.id)}
                 >
                   <option value="" disabled>
-                    Select a type
+                    {c.selectType}
                   </option>
-                  {SUBCATEGORY_TYPES.map(([value, label]) => (
+                  {subcategoryTypes().map(([value, label]) => (
                     <option key={value} value={value}>
                       {label}
                     </option>
@@ -155,7 +158,7 @@ export default function CategorySubcategoryManager() {
           </div>
         </div>
       ))}
-      <button onClick={addCategory}>+ Add Category</button>
+      <button onClick={addCategory}>{c.addCategory}</button>
     </div>
   );
 }

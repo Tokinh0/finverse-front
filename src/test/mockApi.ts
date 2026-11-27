@@ -12,7 +12,13 @@ export const mockApiModule = () => ({
   reportsApi: { monthlyByCategory: vi.fn(), monthlyBySubcategory: vi.fn(), financialHealth: vi.fn(), categorizationProgress: vi.fn() },
   transactionsApi: { list: vi.fn(), recategorize: vi.fn(), markUnknown: vi.fn(), unmarkUnknown: vi.fn() },
   alertsApi: { list: vi.fn(), dismiss: vi.fn(), restore: vi.fn() },
-  settingsApi: { claude: vi.fn(), updateClaude: vi.fn(), removeClaudeKey: vi.fn() },
+  settingsApi: {
+    claude: vi.fn(),
+    updateClaude: vi.fn(),
+    removeClaudeKey: vi.fn(),
+    preferences: vi.fn(async () => ({ locale: "en", available_locales: ["en", "pt-BR"] })),
+    updatePreferences: vi.fn(async ({ locale }: { locale: string }) => ({ locale, available_locales: ["en", "pt-BR"] })),
+  },
   suggestionsApi: {
     // Pages that only show the badge get an empty summary unless a test sets one.
     summary: vi.fn(async () => ({

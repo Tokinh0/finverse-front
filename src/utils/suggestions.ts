@@ -1,15 +1,12 @@
+import { messages } from "../i18n/locale";
 import type { CategorizationProgressMonth, CategorizationSource, CategorySuggestion, RuleSuggestion } from "../types";
 import { OTHER_COLOR, SERIES_COLORS, formatPct, shortMonth } from "./health";
 
 /** 0.874 -> "87%" */
 export const confidenceLabel = (confidence: number) => `${Math.round(confidence * 100)}%`;
 
-export const SOURCE_LABELS: Record<CategorizationSource, string> = {
-  keyword: "Your rules",
-  ai_accepted: "Accepted suggestions",
-  manual: "Manual",
-  uncategorized: "Not categorized yet",
-};
+/** "Your rules", "Manual"... in the current language. */
+export const sourceLabel = (source: CategorizationSource) => messages().suggestions.sources[source];
 
 /**
  * Colors follow the source (fixed slots of the validated palette); "not categorized yet" is the
@@ -24,14 +21,9 @@ export const SOURCE_COLORS: Record<CategorizationSource, string> = {
 export const STACK_ORDER: CategorizationSource[] = ["keyword", "manual", "ai_accepted", "uncategorized"];
 
 /** What each origin means, for tooltips. */
-export const ORIGIN_HELP: Record<"ai" | "history" | "local", string> = {
-  ai: "Claude suggested this from your categories, rules and past choices.",
-  history: "You already put this merchant in this subcategory before. No API call was needed.",
-  local: "Finverse noticed this from your own corrections. No API call was needed.",
-};
+export const originHelp = (origin: CategorySuggestion["origin"] | RuleSuggestion["origin"]) => messages().suggestions.originHelp[origin];
 
-export const originLabel = (origin: CategorySuggestion["origin"] | RuleSuggestion["origin"]) =>
-  origin === "ai" ? "Claude" : "Your history";
+export const originLabel = (origin: CategorySuggestion["origin"] | RuleSuggestion["origin"]) => messages().suggestions.origins[origin];
 
 export interface MerchantGroup {
   merchantKey: string;
@@ -53,17 +45,13 @@ export function groupByMerchant(suggestions: CategorySuggestion[]): MerchantGrou
   );
 }
 
-export const RULE_TITLES: Record<RuleSuggestion["action"], string> = {
-  create: "New rule",
-  update: "Change rule",
-  delete: "Remove rule",
-};
+export const ruleTitle = (action: RuleSuggestion["action"]) => messages().suggestions.ruleTitles[action];
 
 /** "Run failed" text for the banner, or null. */
 export function runProblem(run: { status: string; error_message: string | null } | null | undefined) {
   if (!run) return null;
-  if (run.status === "failed") return run.error_message ?? "Generating suggestions failed.";
-  if (run.status === "queued" && run.error_message) return `${run.error_message} (retrying)`;
+  if (run.status === "failed") return run.error_message ?? messages().suggestions.run.failed;
+  if (run.status === "queued" && run.error_message) return messages().suggestions.run.retrying(run.error_message);
   return null;
 }
 
@@ -74,9 +62,9 @@ export function progressHeadline(months: CategorizationProgressMonth[]) {
   if (!latest || latest.keyword_share === null) return null;
   const previous = withData[withData.length - 2];
   const change = previous?.keyword_share != null ? Math.round((latest.keyword_share - previous.keyword_share) * 100) : null;
+  const t = messages().suggestions.progressChart;
   return {
-    text: `${formatPct(latest.keyword_share)} of ${shortMonth(latest.month)}'s transactions were categorized by your rules`,
-    change:
-      change === null ? null : change === 0 ? "same as the month before" : `${change > 0 ? "↑" : "↓"} ${Math.abs(change)} points vs ${shortMonth(previous!.month)}`,
+    text: t.headline(formatPct(latest.keyword_share), shortMonth(latest.month)),
+    change: change === null ? null : change === 0 ? t.same : t.change(change > 0 ? "↑" : "↓", Math.abs(change), shortMonth(previous!.month)),
   };
 }

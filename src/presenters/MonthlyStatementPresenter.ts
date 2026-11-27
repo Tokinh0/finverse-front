@@ -1,3 +1,4 @@
+import { messages } from "../i18n/locale";
 export interface RawMonthlyStatement {
   id: number;
   filename?: string;
@@ -18,10 +19,10 @@ export class MonthlyStatementPresenter {
 
   constructor(raw: RawMonthlyStatement) {
     this.id = raw.id;
-    this.filename = raw.filename || "Unnamed file";
-    this.uploadedAt = raw.uploaded_at || raw.created_at || "Unknown date";
-    this.firstTransactionDate = raw.first_transaction_date || "Unknown date";
-    this.lastTransactionDate = raw.last_transaction_date || "Unknown date";
+    this.filename = raw.filename || messages().statements.unnamedFile;
+    this.uploadedAt = raw.uploaded_at || raw.created_at || messages().statements.unknownDate;
+    this.firstTransactionDate = raw.first_transaction_date || messages().statements.unknownDate;
+    this.lastTransactionDate = raw.last_transaction_date || messages().statements.unknownDate;
     this.status = raw.status || "";
   }
 

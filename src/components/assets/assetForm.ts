@@ -1,4 +1,5 @@
 import type { AssetParams } from "../../api";
+import { messages } from "../../i18n/locale";
 import { parseAmount } from "../../utils/formatter";
 
 export type AssetFormValues = Omit<AssetParams, "current_value"> & { current_value: string };
@@ -8,11 +9,12 @@ export const EMPTY_ASSET_FORM: AssetFormValues = { ticker: "", asset_type: "", d
 
 export function validateAsset(values: AssetFormValues): AssetFormErrors {
   const errors: AssetFormErrors = {};
-  if (!values.asset_type) errors.asset_type = "Tipo de ativo é obrigatório";
-  if (!values.description.trim()) errors.description = "Descrição é obrigatória";
-  if (!values.current_value.trim()) errors.current_value = "Valor atual é obrigatório";
-  else if (Number.isNaN(parseAmount(values.current_value))) errors.current_value = "Valor inválido";
-  if (values.rating < 1 || values.rating > 10) errors.rating = "Nota deve ser entre 1 e 10";
-  if (values.quantity <= 0) errors.quantity = "Quantidade deve ser maior que 0";
+  const t = messages().assetForm.errors;
+  if (!values.asset_type) errors.asset_type = t.typeRequired;
+  if (!values.description.trim()) errors.description = t.descriptionRequired;
+  if (!values.current_value.trim()) errors.current_value = t.valueRequired;
+  else if (Number.isNaN(parseAmount(values.current_value))) errors.current_value = t.valueInvalid;
+  if (values.rating < 1 || values.rating > 10) errors.rating = t.ratingRange;
+  if (values.quantity <= 0) errors.quantity = t.quantityPositive;
   return errors;
 }

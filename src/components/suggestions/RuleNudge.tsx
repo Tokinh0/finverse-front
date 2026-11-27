@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Alert, Button } from "react-bootstrap";
 import { suggestionsApi } from "../../api";
 import type { RuleSuggestion } from "../../types";
+import { useI18n } from "../../i18n/context";
 
 interface Props {
   suggestion: RuleSuggestion;
@@ -14,6 +15,7 @@ export default function RuleNudge({ suggestion, onDone }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const sub = suggestion.proposed?.subcategory;
+  const n = useI18n().t.suggestions.nudge;
 
   const answer = async (action: () => Promise<{ updated_count: number }>, message: (moved: number) => string) => {
     setBusy(true);
@@ -23,7 +25,7 @@ export default function RuleNudge({ suggestion, onDone }: Props) {
       onDone(message(result.updated_count));
     } catch (err) {
       console.error(err);
-      setError("Could not save that. Try again.");
+      setError(n.error);
       setBusy(false);
     }
   };
@@ -31,8 +33,8 @@ export default function RuleNudge({ suggestion, onDone }: Props) {
   return (
     <Alert variant="info" dismissible onClose={() => onDone()} data-testid="rule-nudge">
       <div className="mb-2">
-        <strong>Create a rule for this?</strong> {suggestion.reason}. A rule would put descriptions containing{" "}
-        <code>{suggestion.proposed?.name}</code> in <strong>{sub ? `${sub.category} / ${sub.name}` : "this subcategory"}</strong> automatically.
+        <strong>{n.title}</strong> {suggestion.reason}. {n.wouldPut} <code>{suggestion.proposed?.name}</code> {n.in}{" "}
+        <strong>{sub ? `${sub.category} / ${sub.name}` : n.thisSubcategory}</strong> {n.automatically}
       </div>
       {error && <div className="text-danger small mb-2">{error}</div>}
       <div className="d-flex flex-wrap gap-2">
@@ -43,19 +45,19 @@ export default function RuleNudge({ suggestion, onDone }: Props) {
           onClick={() =>
             answer(
               () => suggestionsApi.acceptRule(suggestion.id, { reapply: "uncategorized" }),
-              (moved) => `Rule "${suggestion.proposed?.name}" created.${moved > 0 ? ` ${moved} more transaction(s) moved.` : ""}`
+              (moved) => n.created(suggestion.proposed?.name ?? "", moved)
             )
           }
         >
-          Create rule
+          {n.create}
         </Button>
         <Button
           size="sm"
           variant="outline-secondary"
           disabled={busy}
-          onClick={() => answer(() => suggestionsApi.rejectRule(suggestion.id), () => "OK, no rule for this one.")}
+          onClick={() => answer(() => suggestionsApi.rejectRule(suggestion.id), () => n.declined)}
         >
-          No thanks
+          {n.decline}
         </Button>
       </div>
     </Alert>

@@ -2,8 +2,12 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { RULES_STEPS, TRANSACTIONS_STEPS } from "../../utils/suggestionsGuide";
+import { rulesSteps, transactionsSteps } from "../../utils/suggestionsGuide";
+
+const RULES_STEPS = rulesSteps();
+const TRANSACTIONS_STEPS = transactionsSteps();
 import SuggestionsGuideModal from "./SuggestionsGuideModal";
+import { inLocale } from "../../test/i18n";
 
 const renderGuide = () =>
   render(
@@ -36,4 +40,18 @@ describe("SuggestionsGuideModal", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "Transaction suggestions" }));
     TRANSACTIONS_STEPS.forEach((step) => expect(dialog.querySelector(`[data-guide="${step.target}"]`)).not.toBeNull());
   });
+
+  it("is fully translated in Portuguese", async () => {
+    render(
+      <MemoryRouter>
+        {inLocale("pt-BR", <SuggestionsGuideModal show onHide={vi.fn()} />)}
+      </MemoryRouter>
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Como funciona a página de Sugestões" });
+    expect(dialog).toHaveTextContent("dados fictícios");
+    expect(dialog).toHaveTextContent("Prévia do impacto");
+    expect(dialog).toHaveTextContent("App de corridas que você sempre coloca em Transporte");
+  });
 });
+

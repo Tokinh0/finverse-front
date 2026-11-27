@@ -6,6 +6,7 @@ import { categoriesApi, suggestionsApi, transactionsApi } from "../api";
 import { SuggestionsSummaryContext } from "../hooks/suggestionsSummary";
 import { category, categorySuggestion, ruleSuggestion, subcategory, suggestionsSummary, transaction, transactionsPage } from "../test/fixtures";
 import Transactions from "./Transactions";
+import { inLocale } from "../test/i18n";
 
 vi.mock("../api", async () => (await import("../test/mockApi")).mockApiModule());
 
@@ -41,7 +42,7 @@ describe("Transactions", () => {
     renderPage();
 
     const row = (await screen.findByText("LANCHONETE EXEMPLO")).closest("tr")!;
-    expect(within(row).getByText("02/03/2025")).toBeInTheDocument();
+    expect(within(row).getByText("03/02/2025")).toBeInTheDocument();
     expect(within(row).getByText("Outros / Outros")).toBeInTheDocument();
     expect(within(row).getByText(/60,28/)).toBeInTheDocument();
     expect(screen.getByTestId("transactions-summary")).toHaveTextContent(/2 transactions · R\$\s?5\.060,28/);
@@ -201,5 +202,23 @@ describe("Transactions", () => {
       await waitFor(() => expect(transactionsApi.list).toHaveBeenLastCalledWith({ unknown: "true", page: 1, per_page: 50 }));
     });
   });
-});
 
+  it("is shown in Portuguese, with day-first dates, when that is the language", async () => {
+    render(
+      inLocale(
+        "pt-BR",
+        <SuggestionsSummaryContext.Provider value={{ summary: suggestionsSummary({ pending_category_count: 0 }), refresh: refreshSummary }}>
+          <MemoryRouter initialEntries={["/transactions"]}>
+            <Transactions showTotals />
+          </MemoryRouter>
+        </SuggestionsSummaryContext.Provider>
+      )
+    );
+
+    const row = (await screen.findByText("LANCHONETE EXEMPLO")).closest("tr")!;
+    expect(within(row).getByText("02/03/2025")).toBeInTheDocument();
+    expect(within(row).getByRole("button", { name: "Recategorizar" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Transações" })).toBeInTheDocument();
+    expect(screen.getByTestId("transactions-summary")).toHaveTextContent(/2 transações/);
+  });
+});

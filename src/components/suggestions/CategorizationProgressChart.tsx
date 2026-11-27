@@ -1,7 +1,8 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { CategorizationProgressMonth, CategorizationSource } from "../../types";
 import { INK, formatPct, shortMonth } from "../../utils/health";
-import { SOURCE_COLORS, SOURCE_LABELS, STACK_ORDER, progressHeadline } from "../../utils/suggestions";
+import { SOURCE_COLORS, STACK_ORDER, progressHeadline, sourceLabel } from "../../utils/suggestions";
+import { useI18n } from "../../i18n/context";
 
 interface Props {
   months: CategorizationProgressMonth[];
@@ -25,7 +26,7 @@ function ProgressTooltip({ active, label, payload }: TooltipProps) {
         <div key={source} className="health-tooltip-row">
           <span className="d-inline-flex align-items-center gap-2">
             <span className="health-swatch" style={{ background: SOURCE_COLORS[source] }} />
-            {SOURCE_LABELS[source]}
+            {sourceLabel(source)}
           </span>
           <span style={{ fontVariantNumeric: "tabular-nums" }}>
             {row[source]} · {formatPct(share(row[source], row.total))}
@@ -38,6 +39,8 @@ function ProgressTooltip({ active, label, payload }: TooltipProps) {
 
 /** Month by month: how transactions got their category, as shares of the month (100% stacked). */
 export default function CategorizationProgressChart({ months }: Props) {
+  const { t } = useI18n();
+  const p = t.suggestions.progressChart;
   const data = months.map((m) => ({ month: shortMonth(m.month), total: m.total, ...m.counts }));
   const headline = progressHeadline(months);
   if (!months.some((m) => m.total > 0)) return null;
@@ -50,16 +53,16 @@ export default function CategorizationProgressChart({ months }: Props) {
           {headline.change && <span className="text-muted"> · {headline.change}</span>}
         </p>
       )}
-      <div className="health-legend" aria-label="Legend">
+      <div className="health-legend" aria-label={t.common.legend}>
         {STACK_ORDER.map((source) => (
           <span key={source}>
             <span className="health-swatch" style={{ background: SOURCE_COLORS[source] }} />
-            {SOURCE_LABELS[source]}
+            {sourceLabel(source)}
           </span>
         ))}
       </div>
 
-      <div style={{ width: "100%", height: 220 }} role="img" aria-label="Share of transactions by how they were categorized, per month">
+      <div style={{ width: "100%", height: 220 }} role="img" aria-label={p.ariaLabel}>
         <ResponsiveContainer>
           <BarChart data={data} stackOffset="expand" margin={{ top: 8, right: 8, bottom: 0, left: 8 }} barCategoryGap="28%">
             <CartesianGrid vertical={false} stroke={INK.grid} />
@@ -77,7 +80,7 @@ export default function CategorizationProgressChart({ months }: Props) {
               <Bar
                 key={source}
                 dataKey={source}
-                name={SOURCE_LABELS[source]}
+                name={sourceLabel(source)}
                 stackId="source"
                 fill={SOURCE_COLORS[source]}
                 stroke={INK.surface}
@@ -92,19 +95,19 @@ export default function CategorizationProgressChart({ months }: Props) {
       </div>
 
       <details>
-        <summary className="small text-muted">Show as a table</summary>
+        <summary className="small text-muted">{p.showTable}</summary>
         <div className="health-table-wrap">
           <table className="health-table">
-            <caption className="visually-hidden">Transactions per month by how they were categorized</caption>
+            <caption className="visually-hidden">{p.caption}</caption>
             <thead>
               <tr>
-                <th>Month</th>
+                <th>{p.month}</th>
                 {STACK_ORDER.map((source) => (
                   <th key={source} className="num">
-                    {SOURCE_LABELS[source]}
+                    {sourceLabel(source)}
                   </th>
                 ))}
-                <th className="num">Total</th>
+                <th className="num">{p.total}</th>
               </tr>
             </thead>
             <tbody>

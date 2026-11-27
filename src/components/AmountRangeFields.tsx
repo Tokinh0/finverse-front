@@ -1,4 +1,5 @@
 import { Form, InputGroup } from "react-bootstrap";
+import { useI18n } from "../i18n/context";
 
 interface Props {
   idPrefix: string;
@@ -11,39 +12,37 @@ interface Props {
 
 /** Optional amount range for a keyword rule: blank on both sides = any amount. */
 export default function AmountRangeFields({ idPrefix, min, max, onChange, disabled, size }: Props) {
+  const t = useI18n().t.amountRange;
   return (
     <div>
       <div className="d-flex flex-wrap align-items-center gap-2">
-        <span className={size === "sm" ? "small" : undefined}>Only for amounts</span>
+        <span className={size === "sm" ? "small" : undefined}>{t.onlyFor}</span>
         <InputGroup size={size} style={{ width: 170 }}>
-          <InputGroup.Text>from R$</InputGroup.Text>
+          <InputGroup.Text>{t.from}</InputGroup.Text>
           <Form.Control
             id={`${idPrefix}-min`}
-            aria-label="Minimum amount"
+            aria-label={t.minimum}
             inputMode="decimal"
-            placeholder="any"
+            placeholder={t.any}
             value={min}
             onChange={(e) => onChange(e.target.value, max)}
             disabled={disabled}
           />
         </InputGroup>
         <InputGroup size={size} style={{ width: 170 }}>
-          <InputGroup.Text>to R$</InputGroup.Text>
+          <InputGroup.Text>{t.to}</InputGroup.Text>
           <Form.Control
             id={`${idPrefix}-max`}
-            aria-label="Maximum amount"
+            aria-label={t.maximum}
             inputMode="decimal"
-            placeholder="any"
+            placeholder={t.any}
             value={max}
             onChange={(e) => onChange(min, e.target.value)}
             disabled={disabled}
           />
         </InputGroup>
       </div>
-      <Form.Text>
-        Optional. Lets one keyword go to different subcategories by value, e.g. AMAZON up to R$ 99,99 → Assinatura and AMAZON from
-        R$ 100 → Compras.
-      </Form.Text>
+      <Form.Text>{t.help}</Form.Text>
     </div>
   );
 }

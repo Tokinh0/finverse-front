@@ -124,7 +124,15 @@ export const alertsApi = {
     apiRequest("/alerts/dismiss", { method: "DELETE", json: { transaction_id: transactionId, kind } }),
 };
 
+export interface Preferences {
+  locale: string;
+  available_locales: string[];
+}
+
 export const settingsApi = {
+  preferences: () => apiRequest<Preferences>("/settings/preferences"),
+  updatePreferences: (preferences: { locale: string }) =>
+    apiRequest<Preferences>("/settings/preferences", { method: "PUT", json: { preferences } }),
   claude: () => apiRequest<ClaudeSettings>("/settings/claude"),
   updateClaude: (claude: { api_key?: string; model?: string }) =>
     apiRequest<ClaudeSettings>("/settings/claude", { method: "PUT", json: { claude } }),

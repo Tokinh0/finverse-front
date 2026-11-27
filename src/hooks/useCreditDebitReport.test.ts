@@ -19,7 +19,7 @@ describe("useCreditDebitReport", () => {
 
     const { result } = renderHook(() => useCreditDebitReport(load));
 
-    await waitFor(() => expect(result.current.error).toBe("Erro ao carregar o relatório"));
+    await waitFor(() => expect(result.current.error).toBe("Could not load the report"));
     expect(result.current.months).toEqual([]);
   });
 });

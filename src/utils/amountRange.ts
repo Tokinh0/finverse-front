@@ -1,3 +1,4 @@
+import { messages } from "../i18n/locale";
 import { formatCurrency, parseAmount } from "./formatter";
 
 export interface AmountRange {
@@ -7,11 +8,12 @@ export interface AmountRange {
 
 /** "up to R$ 99,99", "from R$ 100,00", "R$ 50,00 to R$ 80,00", or "" without a range. */
 export function amountRangeLabel(min?: number | null, max?: number | null) {
+  const t = messages().amountRange;
   const hasMin = min !== null && min !== undefined;
   const hasMax = max !== null && max !== undefined;
-  if (hasMin && hasMax) return `${formatCurrency(min)} to ${formatCurrency(max)}`;
-  if (hasMin) return `from ${formatCurrency(min)}`;
-  if (hasMax) return `up to ${formatCurrency(max)}`;
+  if (hasMin && hasMax) return t.between(formatCurrency(min), formatCurrency(max));
+  if (hasMin) return t.fromAmount(formatCurrency(min));
+  if (hasMax) return t.upTo(formatCurrency(max));
   return "";
 }
 
@@ -28,8 +30,8 @@ export function parseAmountRange(minText: string, maxText: string): AmountRange 
   const min = parse(minText);
   const max = parse(maxText);
   if ((min !== null && (Number.isNaN(min) || min < 0)) || (max !== null && (Number.isNaN(max) || max < 0))) {
-    return "Amounts must be positive numbers, like 99,90.";
+    return messages().amountRange.invalid;
   }
-  if (min !== null && max !== null && min > max) return "The minimum amount can't be above the maximum.";
+  if (min !== null && max !== null && min > max) return messages().amountRange.inverted;
   return { min_amount: min, max_amount: max };
 }

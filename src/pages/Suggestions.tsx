@@ -17,7 +17,9 @@ import NewSubcategoryModal from "../components/suggestions/NewSubcategoryModal";
 import SectionTitle from "../components/suggestions/SectionTitle";
 import SuggestionsGuideModal from "../components/suggestions/SuggestionsGuideModal";
 import { isRunActive, useSuggestionsSummary } from "../hooks/suggestionsSummary";
-import type { CategorizationProgressMonth, Category, CategorySuggestion, Reapply, RuleSuggestion } from "../types";
+import { useI18n } from "../i18n/context";
+import type { CategorizationProgressMonth, Category, CategorySuggestion, RuleSuggestion } from "../types";
+import { messages } from "../i18n/locale";
 
 interface Props {
   showTotals: boolean;
@@ -43,6 +45,8 @@ export default function Suggestions({ showTotals }: Props) {
   const [notice, setNotice] = useState<{ variant: "success" | "danger"; text: string } | null>(null);
   const [starting, setStarting] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const { t } = useI18n();
+  const sg = t.suggestions;
   // Open while creating a subcategory; `select` (when set) puts the new one in the picker that asked.
   const [creating, setCreating] = useState<{ select?: (subcategoryId: number) => void } | null>(null);
 
@@ -59,7 +63,7 @@ export default function Suggestions({ showTotals }: Props) {
       setError(null);
     } catch (err) {
       console.error(err);
-      setError("Could not load suggestions.");
+      setError(messages().suggestions.loadError);
     }
   }, []);
 
@@ -86,14 +90,14 @@ export default function Suggestions({ showTotals }: Props) {
       const result = await action();
       setNotice({ variant: "success", text: success(result) });
     } catch (err) {
-      setNotice({ variant: "danger", text: errorText(err, "That didn't work. Try again.") });
+      setNotice({ variant: "danger", text: errorText(err, sg.actionError) });
     }
     await Promise.all([load(), refresh()]);
   };
 
   const suggestAgain = async () => {
     setStarting(true);
-    await act(() => suggestionsApi.startRun(), () => "Generating suggestions for everything uncategorized…");
+    await act(() => suggestionsApi.startRun(), () => sg.startedRun);
     setStarting(false);
   };
 
@@ -102,41 +106,39 @@ export default function Suggestions({ showTotals }: Props) {
   const setTab = (next: Tab) => setSearchParams({ tab: next });
 
   if (error) return <ErrorMessage message={error} />;
-  if (!categorySuggestions || !ruleSuggestions) return <Loading message="Loading suggestions..." />;
-
-  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+  if (!categorySuggestions || !ruleSuggestions) return <Loading message={sg.loading} />;
 
   return (
     <Container className="mt-4 text-start">
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-        <h2 className="mb-0">Suggestions</h2>
+        <h2 className="mb-0">{sg.title}</h2>
         <div className="d-flex flex-wrap gap-2">
           <Button variant="outline-secondary" size="sm" onClick={() => setCreating({})}>
             <CreateNewFolderOutlined fontSize="small" className="me-1" aria-hidden />
-            New category / subcategory
+            {sg.newCategory}
           </Button>
           <Button variant="outline-secondary" size="sm" onClick={() => setShowGuide(true)}>
             <MenuBookOutlined fontSize="small" className="me-1" aria-hidden />
-            How this page works
+            {sg.howItWorks}
           </Button>
         </div>
       </div>
 
       {progress.some((m) => m.total > 0) && (
-        <section aria-label="Progress">
+        <section aria-label={sg.progress}>
           <SectionTitle
             icon={<InsightsOutlined fontSize="small" />}
-            title="Progress"
-            help="How each month's transactions got their category. As you accept rules, the blue part grows and there's less to review."
+            title={sg.progress}
+            help={sg.progressHelp}
           />
           <CategorizationProgressChart months={progress} />
         </section>
       )}
-      <section aria-label="Last run">
+      <section aria-label={sg.lastRun}>
         <SectionTitle
           icon={<SyncOutlined fontSize="small" />}
-          title="Last run"
-          help="Suggestions are generated after each import. Your own history is used first; Claude only sees what history couldn't place."
+          title={sg.lastRun}
+          help={sg.lastRunHelp}
         />
         <RunStatus summary={summary} starting={starting} onSuggestAgain={suggestAgain} />
       </section>
@@ -151,25 +153,23 @@ export default function Suggestions({ showTotals }: Props) {
         <Nav.Item>
           <Nav.Link eventKey="rules">
             <RuleOutlined fontSize="small" className="me-1" aria-hidden />
-            Rules ({ruleSuggestions.length})
+            {sg.rulesTab(ruleSuggestions.length)}
           </Nav.Link>
         </Nav.Item>
         <Nav.Item>
           <Nav.Link eventKey="transactions">
             <ReceiptLongOutlined fontSize="small" className="me-1" aria-hidden />
-            Transactions ({categorySuggestions.length})
+            {sg.transactionsTab(categorySuggestions.length)}
           </Nav.Link>
         </Nav.Item>
       </Nav>
 
       {tab === "rules" ? (
         ruleSuggestions.length === 0 ? (
-          <p className="text-muted my-4 text-center">No rule suggestions right now.</p>
+          <p className="text-muted my-4 text-center">{sg.noRules}</p>
         ) : (
           <div className="d-grid gap-3">
-            <p className="text-muted small mb-0">
-              Accepted rules become regular keyword rules, so future imports categorize these transactions on their own.
-            </p>
+            <p className="text-muted small mb-0">{sg.rulesIntro}</p>
             {ruleSuggestions.map((suggestion) => (
               <RuleSuggestionCard
                 key={suggestion.id}
@@ -177,16 +177,13 @@ export default function Suggestions({ showTotals }: Props) {
                 categories={categories}
                 showTotals={showTotals}
                 onNewSubcategory={requestNewSubcategory}
-                onAccept={(params: { name?: string; subcategory_id?: number; reapply: Reapply }) =>
+                onAccept={(params: Parameters<typeof suggestionsApi.acceptRule>[1]) =>
                   act(
                     () => suggestionsApi.acceptRule(suggestion.id, params),
-                    (result) => {
-                      const moved = (result as { updated_count: number }).updated_count;
-                      return `Rule saved.${moved > 0 ? ` ${plural(moved, "transaction")} moved.` : ""}`;
-                    }
+                    (result) => sg.ruleSaved((result as { updated_count: number }).updated_count)
                   )
                 }
-                onReject={() => act(() => suggestionsApi.rejectRule(suggestion.id), () => "Rejected. It won't be suggested again unless your data changes a lot.")}
+                onReject={() => act(() => suggestionsApi.rejectRule(suggestion.id), () => sg.ruleRejected)}
               />
             ))}
           </div>
@@ -200,31 +197,31 @@ export default function Suggestions({ showTotals }: Props) {
           acceptAll={(minConfidence) =>
             act(
               () => suggestionsApi.bulkAccept({ min_confidence: minConfidence }),
-              (result) => `${plural((result as { accepted_count: number }).accepted_count, "suggestion")} accepted.`
+              (result) => sg.accepted((result as { accepted_count: number }).accepted_count)
             )
           }
           acceptMerchant={(merchantKey) =>
             act(
               () => suggestionsApi.bulkAccept({ merchant_key: merchantKey }),
-              (result) => `${plural((result as { accepted_count: number }).accepted_count, "transaction")} categorized.`
+              (result) => sg.categorized((result as { accepted_count: number }).accepted_count)
             )
           }
           acceptAs={(group, subcategoryId) =>
             act(
               () => Promise.all(group.map((s) => suggestionsApi.acceptCategory(s.id, subcategoryId))),
-              () => `${plural(group.length, "transaction")} moved.`
+              () => sg.moved(group.length)
             )
           }
           dontKnow={(group) =>
             act(
               () => Promise.all(group.map((s) => suggestionsApi.dontKnow(s.id))),
-              () => `Marked ${plural(group.length, "transaction")} as "can't remember". They stay in Outros.`
+              () => sg.markedUnknown(group.length)
             )
           }
           reject={(group) =>
             act(
               () => Promise.all(group.map((s) => suggestionsApi.rejectCategory(s.id))),
-              () => "Rejected. That subcategory won't be suggested for this merchant again."
+              () => sg.rejected
             )
           }
         />
@@ -238,7 +235,7 @@ export default function Suggestions({ showTotals }: Props) {
           await loadCategories();
           creating?.select?.(subcategory.id);
           setCreating(null);
-          setNotice({ variant: "success", text: `Subcategory "${subcategory.name}" created.` });
+          setNotice({ variant: "success", text: sg.subcategoryCreated(subcategory.name) });
         }}
       />
     </Container>

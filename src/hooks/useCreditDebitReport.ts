@@ -1,3 +1,4 @@
+import { messages } from "../i18n/locale";
 import { useEffect, useState } from "react";
 import type { CreditDebitReport } from "../types";
 
@@ -12,7 +13,7 @@ export function useCreditDebitReport<T extends Record<string, unknown>>(load: ()
       .then(setReport)
       .catch((err) => {
         console.error("Failed to fetch report:", err);
-        setError("Erro ao carregar o relatório");
+        setError(messages().reports.loadError);
       })
       .finally(() => setLoading(false));
   }, [load]);

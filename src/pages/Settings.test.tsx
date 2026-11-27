@@ -3,6 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, settingsApi } from "../api";
 import Settings from "./Settings";
+import { I18nContext } from "../i18n/context";
+import { en } from "../i18n/en";
+import { inLocale } from "../test/i18n";
 
 vi.mock("../api", async () => (await import("../test/mockApi")).mockApiModule());
 
@@ -61,5 +64,26 @@ describe("Settings", () => {
 
     expect(settingsApi.removeClaudeKey).toHaveBeenCalled();
     expect(await screen.findByText(/API key removed/)).toBeInTheDocument();
+  });
+
+  it("changes the app's language", async () => {
+    const setLocale = vi.fn().mockResolvedValue(undefined);
+    render(
+      <I18nContext.Provider value={{ locale: "en", t: en, setLocale }}>
+        <Settings />
+      </I18nContext.Provider>
+    );
+
+    await userEvent.selectOptions(await screen.findByLabelText("Language"), "pt-BR");
+
+    expect(setLocale).toHaveBeenCalledWith("pt-BR");
+  });
+
+  it("is shown in Portuguese when that is the language", async () => {
+    render(inLocale("pt-BR", <Settings />));
+
+    expect(await screen.findByRole("heading", { name: "Configurações" })).toBeInTheDocument();
+    expect(screen.getByText(/O que é enviado ao Claude/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Idioma")).toHaveValue("pt-BR");
   });
 });

@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { cloneElement, type ReactElement } from "react";
 import { afterEach, vi } from "vitest";
+import { setCurrentLocale } from "../i18n/locale";
 
 // jsdom has no layout, so give Recharts' ResponsiveContainer a fixed size and let charts render.
 vi.mock("recharts", async (importOriginal) => {
@@ -15,5 +16,6 @@ vi.mock("recharts", async (importOriginal) => {
 
 afterEach(() => {
   cleanup();
+  setCurrentLocale("en");
   vi.restoreAllMocks();
 });

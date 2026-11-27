@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
 import { Bar, BarChart, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useI18n } from "../i18n/context";
 import type { CategoryReportEntry } from "../types";
 import { renderCustomPieLabel } from "../utils/chartHelper";
 import { colorAt, formatBRL } from "../utils/colors";
@@ -14,11 +15,12 @@ interface Props {
 export default function CategoryChart({ data }: Props) {
   const [chartType, setChartType] = useState<ChartType>("pie");
   const selectId = useId();
+  const { t } = useI18n();
 
-  if (!data || typeof data !== "object") return <p>Invalid data</p>;
+  if (!data || typeof data !== "object") return <p>{t.charts.invalidData}</p>;
 
   const chartData = toCategoryChartData(data);
-  if (!chartData.length) return <p>No data to display.</p>;
+  if (!chartData.length) return <p>{t.charts.noData}</p>;
 
   return (
     <div>

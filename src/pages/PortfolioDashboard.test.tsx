@@ -23,7 +23,7 @@ describe("PortfolioDashboard", () => {
     const { rerender } = render(<PortfolioDashboard showTotals={false} />);
 
     expect(await screen.findByText("CDB")).toBeInTheDocument();
-    expect(screen.getAllByText("Criptomoedas").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Crypto").length).toBeGreaterThan(0);
     expect(screen.queryByText(/R\$\s?1\.500,00/)).not.toBeInTheDocument();
 
     rerender(<PortfolioDashboard showTotals />);
@@ -35,7 +35,7 @@ describe("PortfolioDashboard", () => {
     render(<PortfolioDashboard showTotals={false} />);
     await screen.findByText("CDB");
 
-    await userEvent.click(screen.getAllByText("Criptomoedas")[0]);
+    await userEvent.click(screen.getAllByText("Crypto")[0]);
 
     expect(screen.queryByText("CDB")).not.toBeInTheDocument();
     expect(screen.getByText("BTC")).toBeInTheDocument();
@@ -43,20 +43,20 @@ describe("PortfolioDashboard", () => {
 
   it("does not delete when the confirm dialog is dismissed", async () => {
     render(<PortfolioDashboard showTotals={false} />);
-    await userEvent.click(await screen.findByRole("button", { name: "Excluir CDB" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Delete CDB" }));
 
     await userEvent.keyboard("{Escape}");
 
-    await waitFor(() => expect(screen.queryByText("Confirmar Exclusão")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText("Confirm deletion")).not.toBeInTheDocument());
     expect(assetsApi.remove).not.toHaveBeenCalled();
   });
 
   it("deletes an asset after confirming", async () => {
     vi.mocked(assetsApi.remove).mockResolvedValue(undefined);
     render(<PortfolioDashboard showTotals={false} />);
-    await userEvent.click(await screen.findByRole("button", { name: "Excluir CDB" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Delete CDB" }));
 
-    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Excluir" }));
+    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Delete" }));
 
     expect(assetsApi.remove).toHaveBeenCalledWith(1);
     await waitFor(() => expect(screen.queryByText("CDB")).not.toBeInTheDocument());
@@ -65,9 +65,9 @@ describe("PortfolioDashboard", () => {
   it("updates an edited asset in place", async () => {
     vi.mocked(assetsApi.update).mockResolvedValue(asset({ ticker: "CDB2" }));
     render(<PortfolioDashboard showTotals={false} />);
-    await userEvent.click(await screen.findByRole("button", { name: "Editar CDB" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Edit CDB" }));
 
-    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     expect(assetsApi.update).toHaveBeenCalledWith(1, expect.objectContaining({ ticker: "CDB", current_value: 1500 }));
     expect(await screen.findByText("CDB2")).toBeInTheDocument();
