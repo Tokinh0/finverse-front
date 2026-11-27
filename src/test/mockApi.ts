@@ -10,4 +10,6 @@ export const mockApiModule = () => ({
   keywordsApi: { list: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn() },
   assetsApi: { dashboard: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn() },
   reportsApi: { monthlyByCategory: vi.fn(), monthlyBySubcategory: vi.fn() },
+  transactionsApi: { list: vi.fn(), recategorize: vi.fn() },
+  toQuery: (params: object) => `?${new URLSearchParams(params as Record<string, string>)}`,
 });

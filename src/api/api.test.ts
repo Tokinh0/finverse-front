@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError, apiRequest, API_BASE_URL } from "./client";
-import { keywordsApi, statementsApi } from "./index";
+import { keywordsApi, statementsApi, toQuery, transactionsApi } from "./index";
 
 const mockFetch = (status: number, body?: unknown) =>
   vi.spyOn(globalThis, "fetch").mockResolvedValue(
@@ -52,3 +52,28 @@ describe("apiRequest", () => {
     expect(error).toMatchObject({ status: 422, body: { name: ["can't be blank"] } });
   });
 });
+
+describe("transactionsApi", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("sends only the filters that are set", async () => {
+    const fetchSpy = mockFetch(200, { transactions: [], meta: {} });
+
+    await transactionsApi.list({ month: "2025-03", q: "", page: 2 });
+
+    expect(fetchSpy.mock.calls[0][0]).toBe(`${API_BASE_URL}/api/v1/transactions?month=2025-03&page=2`);
+    expect(toQuery({})).toBe("");
+  });
+
+  it("nests re-categorize params under transaction", async () => {
+    const fetchSpy = mockFetch(200, { transaction: {}, keyword: null, updated_count: 0 });
+
+    await transactionsApi.recategorize(5, { subcategory_id: 3, keyword: "IFD", apply_to_matching: true });
+
+    expect(fetchSpy.mock.calls[0][1]?.method).toBe("PATCH");
+    expect(JSON.parse(fetchSpy.mock.calls[0][1]?.body as string)).toEqual({
+      transaction: { subcategory_id: 3, keyword: "IFD", apply_to_matching: true },
+    });
+  });
+});
+

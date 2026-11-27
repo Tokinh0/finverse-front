@@ -1,4 +1,4 @@
-import type { Asset, Category, Keyword, Subcategory } from "../types";
+import type { Asset, Category, Keyword, Subcategory, Transaction, TransactionsPage } from "../types";
 
 export const subcategory = (overrides: Partial<Subcategory> = {}): Subcategory => ({
   id: 10,
@@ -36,4 +36,22 @@ export const asset = (overrides: Partial<Asset> = {}): Asset => ({
   percent_by_type: 100,
   color_code: "#00ff00",
   ...overrides,
+});
+
+export const transaction = (overrides: Partial<Transaction> = {}): Transaction => ({
+  id: 1000,
+  name: "LANCHONETE EXEMPLO",
+  parsed_name: "LANCHONETE_EXEMPLO",
+  amount: 60.28,
+  transaction_date: "2025-03-02",
+  transaction_type: "debit",
+  monthly_statement_id: 1,
+  subcategory: { id: 99, name: "Outros", color_code: "#999999" },
+  category: { id: 9, name: "Outros" },
+  ...overrides,
+});
+
+export const transactionsPage = (transactions: Transaction[], meta: Partial<TransactionsPage["meta"]> = {}): TransactionsPage => ({
+  transactions,
+  meta: { total_count: transactions.length, total_amount: 60.28, page: 1, per_page: 50, months: ["2025-03", "2025-02"], ...meta },
 });

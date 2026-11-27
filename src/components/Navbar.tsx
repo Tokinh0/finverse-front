@@ -9,6 +9,7 @@ interface Props {
 const LINKS = [
   { to: "/", label: "Dashboard" },
   { to: "/statements", label: "Statements" },
+  { to: "/transactions", label: "Transactions" },
   { to: "/categories&subcategories", label: "Categories & Subcategories" },
   { to: "/keywords", label: "Keywords" },
   { to: "/assets", label: "Assets" },

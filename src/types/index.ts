@@ -99,3 +99,57 @@ export interface CreditDebitReport<T> {
   credit: T;
   debit: T;
 }
+
+// GET /transactions
+export type TransactionType = "credit" | "debit" | "unknown";
+
+export interface Transaction {
+  id: number;
+  name: string;
+  parsed_name: string;
+  description?: string | null;
+  amount: number;
+  /** "YYYY-MM-DD" */
+  transaction_date: string;
+  transaction_type: TransactionType;
+  monthly_statement_id: number;
+  subcategory: { id: number; name: string; color_code?: string | null } | null;
+  category: { id: number; name: string; color_code?: string | null } | null;
+}
+
+export interface TransactionsPage {
+  transactions: Transaction[];
+  meta: {
+    total_count: number;
+    total_amount: number;
+    page: number;
+    per_page: number;
+    /** months that have transactions, "YYYY-MM", newest first */
+    months: string[];
+  };
+}
+
+export interface TransactionFilters {
+  month?: string;
+  category_id?: string;
+  subcategory_id?: string;
+  transaction_type?: string;
+  q?: string;
+  page?: number;
+  per_page?: number;
+}
+
+export interface RecategorizeParams {
+  subcategory_id?: number;
+  transaction_type?: TransactionType;
+  /** create this keyword for the new subcategory */
+  keyword?: string;
+  /** re-run matching on other transactions containing the keyword */
+  apply_to_matching?: boolean;
+}
+
+export interface RecategorizeResult {
+  transaction: Transaction;
+  keyword: Keyword | null;
+  updated_count: number;
+}

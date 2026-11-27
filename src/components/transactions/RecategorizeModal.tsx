@@ -1,0 +1,145 @@
+import { FormEvent, useEffect, useState } from "react";
+import { Alert, Button, Form, Modal } from "react-bootstrap";
+import { ApiError, transactionsApi } from "../../api";
+import type { Category, RecategorizeResult, Transaction, TransactionType } from "../../types";
+import { formatIsoDate } from "../../utils/dates";
+
+interface Props {
+  transaction: Transaction | null;
+  categories: Category[];
+  showTotals: boolean;
+  onHide: () => void;
+  onSaved: (result: RecategorizeResult) => void;
+}
+
+const TYPES: [TransactionType, string][] = [
+  ["debit", "Debit (money out)"],
+  ["credit", "Credit (money in)"],
+  ["unknown", "Unknown"],
+];
+
+const errorText = (err: unknown) => {
+  const errors = err instanceof ApiError ? (err.body as { errors?: string[] } | undefined)?.errors : undefined;
+  return errors?.join(", ") || "Could not save the change.";
+};
+
+export default function RecategorizeModal({ transaction, categories, showTotals, onHide, onSaved }: Props) {
+  const [subcategoryId, setSubcategoryId] = useState("");
+  const [transactionType, setTransactionType] = useState<TransactionType>("debit");
+  const [createKeyword, setCreateKeyword] = useState(false);
+  const [keyword, setKeyword] = useState("");
+  const [applyToMatching, setApplyToMatching] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!transaction) return;
+    setSubcategoryId(String(transaction.subcategory?.id ?? ""));
+    setTransactionType(transaction.transaction_type);
+    setCreateKeyword(false);
+    setKeyword(transaction.name.trim());
+    setApplyToMatching(true);
+    setError(null);
+  }, [transaction]);
+
+  if (!transaction) return null;
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      const result = await transactionsApi.recategorize(transaction.id, {
+        subcategory_id: Number(subcategoryId),
+        transaction_type: transactionType,
+        ...(createKeyword && keyword.trim() ? { keyword: keyword.trim(), apply_to_matching: applyToMatching } : {}),
+      });
+      onSaved(result);
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal show onHide={saving ? undefined : onHide} backdrop={saving ? "static" : true}>
+      <Form onSubmit={handleSubmit}>
+        <Modal.Header closeButton={!saving}>
+          <Modal.Title>Re-categorize transaction</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="d-grid gap-3">
+          <div>
+            <div className="fw-semibold text-break">{transaction.name}</div>
+            <div className="text-muted small">
+              {formatIsoDate(transaction.transaction_date)}
+              {showTotals && ` · R$ ${transaction.amount.toFixed(2)}`}
+              {transaction.subcategory && ` · now in ${transaction.category?.name} / ${transaction.subcategory.name}`}
+            </div>
+          </div>
+
+          {error && <Alert variant="danger" className="mb-0">{error}</Alert>}
+
+          <Form.Group controlId="recategorize-subcategory">
+            <Form.Label>Subcategory</Form.Label>
+            <Form.Select value={subcategoryId} onChange={(e) => setSubcategoryId(e.target.value)} required disabled={saving}>
+              {categories.map((category) => (
+                <optgroup key={category.id} label={category.name}>
+                  {category.subcategories.map((sub) => (
+                    <option key={sub.id} value={sub.id}>
+                      {sub.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </Form.Select>
+          </Form.Group>
+
+          <Form.Group controlId="recategorize-type">
+            <Form.Label>Type</Form.Label>
+            <Form.Select value={transactionType} onChange={(e) => setTransactionType(e.target.value as TransactionType)} disabled={saving}>
+              {TYPES.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+
+          <Form.Check
+            id="recategorize-create-keyword"
+            type="checkbox"
+            label="Create a keyword so future imports use this subcategory"
+            checked={createKeyword}
+            onChange={(e) => setCreateKeyword(e.target.checked)}
+            disabled={saving}
+          />
+          {createKeyword && (
+            <div className="d-grid gap-2 ps-4">
+              <Form.Group controlId="recategorize-keyword">
+                <Form.Label className="small mb-1">Keyword (text the transaction name contains)</Form.Label>
+                <Form.Control value={keyword} onChange={(e) => setKeyword(e.target.value)} required disabled={saving} />
+              </Form.Group>
+              <Form.Check
+                id="recategorize-apply"
+                type="checkbox"
+                label="Also move existing transactions this keyword matches best"
+                checked={applyToMatching}
+                onChange={(e) => setApplyToMatching(e.target.checked)}
+                disabled={saving}
+              />
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="outline-secondary" onClick={onHide} disabled={saving}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="dark" disabled={saving || !subcategoryId}>
+            {saving ? "Saving..." : "Save"}
+          </Button>
+        </Modal.Footer>
+      </Form>
+    </Modal>
+  );
+}

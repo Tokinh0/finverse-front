@@ -2,6 +2,7 @@ import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { renderCustomPieLabel } from "./chartHelper";
 import { colorAt, formatBRL } from "./colors";
+import { formatIsoDate, formatMonth } from "./dates";
 import { formatCurrency, parseAmount } from "./formatter";
 import { toCategoryChartData } from "./reports";
 
@@ -62,3 +63,12 @@ describe("renderCustomPieLabel", () => {
     expect(renderCustomPieLabel({ percent: 0.001, name: "X" })).toBeNull();
   });
 });
+
+describe("dates", () => {
+  it("formats ISO dates and months the Brazilian way", () => {
+    expect(formatIsoDate("2025-03-02")).toBe("02/03/2025");
+    expect(formatMonth("2025-03")).toBe("03/2025");
+    expect(formatIsoDate("bad")).toBe("bad");
+  });
+});
+

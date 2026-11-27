@@ -7,7 +7,11 @@ import type {
   MonthlyByCategoryReport,
   MonthlyBySubcategoryReport,
   PortfolioDashboardData,
+  RecategorizeParams,
+  RecategorizeResult,
   Subcategory,
+  TransactionFilters,
+  TransactionsPage,
 } from "../types";
 import type { RawMonthlyStatement } from "../presenters/MonthlyStatementPresenter";
 import type { RawSummaryLine } from "../presenters/SummaryLinePresenter";
@@ -70,4 +74,20 @@ export const reportsApi = {
   monthlyByCategory: () => apiRequest<CreditDebitReport<MonthlyByCategoryReport>>("/reports/monthly_by_category"),
   monthlyBySubcategory: () =>
     apiRequest<CreditDebitReport<MonthlyBySubcategoryReport>>("/reports/monthly_by_subcategory"),
+};
+
+/** Builds "?a=1&b=2" from the non-empty values. */
+export function toQuery(params: object) {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") query.set(key, String(value));
+  });
+  const text = query.toString();
+  return text ? `?${text}` : "";
+}
+
+export const transactionsApi = {
+  list: (filters: TransactionFilters = {}) => apiRequest<TransactionsPage>(`/transactions${toQuery(filters)}`),
+  recategorize: (id: number, transaction: RecategorizeParams) =>
+    apiRequest<RecategorizeResult>(`/transactions/${id}`, { method: "PATCH", json: { transaction } }),
 };
