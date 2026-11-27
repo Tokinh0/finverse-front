@@ -2,6 +2,26 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## About Finverse
+
+Finverse is a personal finance app built and used by a single person (the repo owner). It is not a
+multi-user product: there is no authentication, tenancy or public deployment to design for.
+
+The goal is one place for the owner's whole financial life ("financial universe"):
+
+**Today**
+- **Spending:** import Sicredi bank statements (checking account and credit card, PDF/CSV), categorize
+  every transaction automatically by keyword, and build monthly reports showing where the money goes.
+  The reports are also used to spot unexpected or mistaken charges.
+- **Portfolio:** track investment holdings by asset type and see the allocation.
+
+**Planned (not built yet)**
+- **Investing strategy:** help decide where to invest so savings grow safely, beyond just tracking holdings.
+- **Tax control:** track taxes paid as *pessoa física* (individual) and *pessoa jurídica* (the owner's company).
+
+Data is the owner's real banking data, in BRL and Portuguese. Never commit statements or other personal
+financial data, and keep test fixtures synthetic.
+
 Finverse frontend: React 19 + TypeScript + Vite. It's the UI for the Finverse Rails API (a separate repo, `../finverse`), covering statement upload, category/keyword management, monthly reports and an investment portfolio. The UI text mixes English and Portuguese, and money is BRL.
 
 ## Commands
