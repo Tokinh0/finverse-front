@@ -24,17 +24,36 @@ describe("MonthlyByCategory", () => {
       debit: { "2025-01": { CONFORTO: { color_code: "#f00", subcategories: { FOOD: { total: 10, transactions: [] } } } } },
     });
 
-    render(<MonthlyByCategory />);
+    render(<MonthlyByCategory showTotals={false} />);
 
-    expect(await screen.findByRole("heading", { name: "2025-01" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "January 2025" })).toBeInTheDocument();
     expect(screen.getByText("No data to display.")).toBeInTheDocument(); // no credits that month
+    expect(screen.queryByText("Balance")).not.toBeInTheDocument();
+  });
+
+  it("sums each side from its categories for the month summary", async () => {
+    vi.mocked(reportsApi.monthlyByCategory).mockResolvedValue({
+      credit: { "2025-01": { RENDA: { color_code: null, subcategories: { SALARIO: { total: 100, transactions: [] } } } } },
+      debit: {
+        "2025-01": {
+          CONFORTO: { color_code: "#f00", subcategories: { FOOD: { total: 30, transactions: [] }, UBER: { total: 10, transactions: [] } } },
+          LAZER: { color_code: "#0f0", subcategories: { CINEMA: { total: 20, transactions: [] } } },
+        },
+      },
+    });
+
+    render(<MonthlyByCategory showTotals />);
+
+    const card = await screen.findByRole("article");
+    expect(within(card).getByText("Money out").parentElement).toHaveTextContent("R$ 60,00");
+    expect(within(card).getByText("Balance").parentElement).toHaveTextContent("R$ 40,00▲ surplus");
   });
 
   it("shows an error when the report fails", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(reportsApi.monthlyByCategory).mockRejectedValue(new Error("x"));
 
-    render(<MonthlyByCategory />);
+    render(<MonthlyByCategory showTotals={false} />);
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not load the report");
   });

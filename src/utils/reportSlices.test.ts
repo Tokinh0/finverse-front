@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { setCurrentLocale } from "../i18n/locale";
 import { CHART_COLORS } from "./colors";
-import { amountTier, cleanName, displayDate, formatPercent, longMonth, sortTransactions, toSlices } from "./subcategoryReport";
+import { amountTier, cleanName, displayDate, formatPercent, isoToBrDate, longMonth, sortTransactions, sumTotals, toCategorySlices, toSlices } from "./reportSlices";
 
 const tx = (transaction_date: string, amount: number) => ({ name: "X", transaction_date, amount });
 
-describe("subcategoryReport utils", () => {
+describe("reportSlices utils", () => {
   it("sorts slices biggest first, with shares and colors tied to the subcategory", () => {
     const slices = toSlices([
       { name: "A", total: 25, color_code: null, transactions: [] },
@@ -44,5 +44,31 @@ describe("subcategoryReport utils", () => {
 
   it("tiers amounts", () => {
     expect([amountTier(301), amountTier(101), amountTier(100)]).toEqual(["high", "medium", "normal"]);
+  });
+
+  it("sums categories from their subcategories and keeps each transaction's subcategory", () => {
+    const slices = toCategorySlices({
+      LAZER: { color_code: "#1", subcategories: { CINEMA: { total: 10, transactions: [] } } },
+      CONFORTO: {
+        color_code: null,
+        subcategories: {
+          UBER: { total: 5, transactions: [{ name: "UBER", amount: "5.00" as unknown as number, transaction_date: "2025-01-31 00:00:00 UTC", transaction_type: "debit" }] },
+          FOOD: { total: 30, transactions: [] },
+        },
+      },
+    });
+
+    expect(slices.map((s) => [s.name, s.total, s.color])).toEqual([
+      ["CONFORTO", 35, CHART_COLORS[1]],
+      ["LAZER", 10, "#1"],
+    ]);
+    expect(slices[0].parts).toEqual([{ name: "FOOD", total: 30 }, { name: "UBER", total: 5 }]);
+    expect(slices[0].transactions).toEqual([{ name: "UBER", amount: 5, transaction_date: "31/01/2025", subcategory: "UBER" }]);
+    expect(sumTotals(slices)).toBe(45);
+  });
+
+  it("converts the category report's dates", () => {
+    expect(isoToBrDate("2026-10-09 00:00:00 UTC")).toBe("09/10/2026");
+    expect(isoToBrDate("x")).toBe("x");
   });
 });

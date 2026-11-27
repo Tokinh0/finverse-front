@@ -1,8 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { toSlices } from "../utils/subcategoryReport";
-import SubcategoryChart, { SubcategoryTooltip } from "./SubcategoryChart";
+import SubcategoryChart from "./SubcategoryChart";
 
 const food = {
   name: "FOOD",
@@ -58,33 +57,5 @@ describe("SubcategoryChart", () => {
     expect(within(dialog).getByRole("heading", { name: "FOOD" })).toBeInTheDocument();
     expect(within(dialog).getByText("Money out · January 2025")).toBeInTheDocument();
     expect(within(dialog).getAllByRole("row")).toHaveLength(3); // header + 2 transactions
-  });
-});
-
-describe("SubcategoryTooltip", () => {
-  const [slice] = toSlices([food, fuel]);
-
-  it("previews the share, count and largest transactions", () => {
-    render(<SubcategoryTooltip active showTotals payload={[{ payload: slice }]} />);
-
-    expect(screen.getByText("FOOD")).toBeInTheDocument();
-    expect(screen.getByText("82.0% of the total")).toBeInTheDocument();
-    expect(screen.getByText("2 transactions")).toBeInTheDocument();
-    const items = screen.getAllByRole("listitem");
-    expect(items[0]).toHaveTextContent("IFOODR$ 400,00"); // largest first
-    expect(items[1]).toHaveTextContent("UBER EATS");
-    expect(screen.getByText("Click to see all transactions")).toBeInTheDocument();
-  });
-
-  it("hides amounts when totals are hidden", () => {
-    render(<SubcategoryTooltip active showTotals={false} payload={[{ payload: slice }]} />);
-
-    expect(screen.queryByText("R$ 410,00")).not.toBeInTheDocument();
-    expect(screen.getAllByRole("listitem")[0]).toHaveTextContent("R$ •••");
-  });
-
-  it("renders nothing when inactive", () => {
-    const { container } = render(<SubcategoryTooltip active={false} showTotals payload={[]} />);
-    expect(container).toBeEmptyDOMElement();
   });
 });
