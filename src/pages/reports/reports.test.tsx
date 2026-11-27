@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { reportsApi } from "../../api";
@@ -51,17 +51,27 @@ describe("MonthlyBySubcategory", () => {
   it("orders months newest first and hides totals by default", async () => {
     render(<MonthlyBySubcategory showTotals={false} />);
 
-    const headings = await screen.findAllByRole("heading", { level: 4 });
-    expect(headings.map((h) => h.textContent)).toEqual(["2025-02", "2025-01"]);
-    expect(screen.queryByText(/Total:/)).not.toBeInTheDocument();
+    const headings = await screen.findAllByRole("heading", { level: 2 });
+    expect(headings.map((h) => h.textContent)).toEqual(["February 2025", "January 2025"]);
+    expect(screen.queryByText("Balance")).not.toBeInTheDocument();
+    expect(screen.queryByText(/R\$ \d/)).not.toBeInTheDocument();
   });
 
-  it("shows only the non-zero totals when enabled", async () => {
+  it("shows the month summary and only the non-zero breakdown totals when enabled", async () => {
     render(<MonthlyBySubcategory showTotals />);
 
-    expect(await screen.findByText("Total Received: R$ 1000.00")).toBeInTheDocument();
-    expect(screen.getAllByText("Total Expended: R$ 50.00")).toHaveLength(2);
-    expect(screen.queryByText(/Total Invested/)).not.toBeInTheDocument();
+    const [february] = await screen.findAllByRole("article");
+    expect(within(february).getByText("Balance").parentElement).toHaveTextContent("R$ 950,00▲ surplus");
+    expect(within(february).getByText("Total Received").nextSibling).toHaveTextContent("R$ 1.000,00");
+    expect(within(february).getByText("Total Expended").nextSibling).toHaveTextContent("R$ 50,00");
+    expect(screen.queryByText("Total Invested")).not.toBeInTheDocument();
+  });
+
+  it("marks a month that spent more than it received", async () => {
+    render(<MonthlyBySubcategory showTotals />);
+
+    const [, january] = await screen.findAllByRole("article");
+    expect(within(january).getByText("Balance").parentElement).toHaveTextContent("-R$ 50,00▼ deficit");
   });
 
   it("keeps the chart type per chart", async () => {
