@@ -153,3 +153,20 @@ export interface RecategorizeResult {
   keyword: Keyword | null;
   updated_count: number;
 }
+
+// GET /alerts
+export type AlertKind = "duplicate" | "new_merchant" | "amount_changed" | "unusual_amount";
+
+export interface ChargeAlert {
+  kind: AlertKind;
+  message: string;
+  details: { related_transaction_id?: number; expected_amount?: number };
+  dismissed: boolean;
+  transaction: Transaction;
+}
+
+export interface AlertsResponse {
+  /** "YYYY-MM", or null when there are no transactions */
+  month: string | null;
+  alerts: ChargeAlert[];
+}

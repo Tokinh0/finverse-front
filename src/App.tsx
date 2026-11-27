@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Route, Routes } from "react-router-dom";
 import AppNavbar from "./components/Navbar";
+import ChargeAlerts from "./pages/ChargeAlerts";
 import CategorySubcategoryManager from "./pages/CategorySubcategoryManager";
 import Dashboard from "./pages/Dashboard";
 import KeywordsCrud from "./pages/KeywordsCrud";
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/statements" element={<Statements />} />
         <Route path="/transactions" element={<Transactions showTotals={showTotals} />} />
+        <Route path="/alerts" element={<ChargeAlerts showTotals={showTotals} />} />
         <Route path="/categories&subcategories" element={<CategorySubcategoryManager />} />
         <Route path="/keywords" element={<KeywordsCrud />} />
         <Route path="/reports/monthly-by-category" element={<MonthlyByCategory />} />

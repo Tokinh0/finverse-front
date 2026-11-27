@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError, apiRequest, API_BASE_URL } from "./client";
-import { keywordsApi, statementsApi, toQuery, transactionsApi } from "./index";
+import { alertsApi, keywordsApi, statementsApi, toQuery, transactionsApi } from "./index";
 
 const mockFetch = (status: number, body?: unknown) =>
   vi.spyOn(globalThis, "fetch").mockResolvedValue(
@@ -74,6 +74,24 @@ describe("transactionsApi", () => {
     expect(JSON.parse(fetchSpy.mock.calls[0][1]?.body as string)).toEqual({
       transaction: { subcategory_id: 3, keyword: "IFD", apply_to_matching: true },
     });
+  });
+});
+
+describe("alertsApi", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("lists, dismisses and restores alerts", async () => {
+    const fetchSpy = mockFetch(204);
+
+    await alertsApi.list({ month: "2025-07", include_dismissed: true });
+    await alertsApi.dismiss(2, "duplicate");
+    await alertsApi.restore(2, "duplicate");
+
+    const [list, dismiss, restore] = fetchSpy.mock.calls;
+    expect(list[0]).toBe(`${API_BASE_URL}/api/v1/alerts?month=2025-07&include_dismissed=true`);
+    expect(dismiss[1]?.method).toBe("POST");
+    expect(JSON.parse(dismiss[1]?.body as string)).toEqual({ transaction_id: 2, kind: "duplicate" });
+    expect(restore[1]?.method).toBe("DELETE");
   });
 });
 

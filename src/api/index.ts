@@ -1,5 +1,7 @@
 import { apiRequest } from "./client";
 import type {
+  AlertKind,
+  AlertsResponse,
   Asset,
   Category,
   CreditDebitReport,
@@ -90,4 +92,12 @@ export const transactionsApi = {
   list: (filters: TransactionFilters = {}) => apiRequest<TransactionsPage>(`/transactions${toQuery(filters)}`),
   recategorize: (id: number, transaction: RecategorizeParams) =>
     apiRequest<RecategorizeResult>(`/transactions/${id}`, { method: "PATCH", json: { transaction } }),
+};
+
+export const alertsApi = {
+  list: (params: { month?: string; include_dismissed?: boolean } = {}) => apiRequest<AlertsResponse>(`/alerts${toQuery(params)}`),
+  dismiss: (transactionId: number, kind: AlertKind) =>
+    apiRequest("/alerts/dismiss", { method: "POST", json: { transaction_id: transactionId, kind } }),
+  restore: (transactionId: number, kind: AlertKind) =>
+    apiRequest("/alerts/dismiss", { method: "DELETE", json: { transaction_id: transactionId, kind } }),
 };
