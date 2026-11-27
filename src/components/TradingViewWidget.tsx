@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, memo } from "react";
+import { useI18n } from "../i18n/context";
 
 interface TradingViewWidgetProps {
   symbol: string;
@@ -101,6 +102,8 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
     watchlist,
   ]);
 
+  const trackMarkets = useI18n().t.dashboard.trackMarkets;
+
   return (
     <div
       className="tradingview-widget-container"
@@ -117,7 +120,7 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
           rel="noopener noreferrer"
           target="_blank"
         >
-          <span className="blue-text">Track all markets on TradingView</span>
+          <span className="blue-text">{trackMarkets}</span>
         </a>
       </div>
     </div>

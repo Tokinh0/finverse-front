@@ -1,7 +1,8 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { statementsApi } from "../api";
+import { MemoryRouter } from "react-router-dom";
+import { ApiError, statementsApi } from "../api";
 import Statements from "./Statements";
 
 vi.mock("../api", async () => (await import("../test/mockApi")).mockApiModule());
@@ -70,5 +71,40 @@ describe("Statements", () => {
     expect(statementsApi.remove).toHaveBeenCalledWith(1);
     await screen.findByText("fatura-2.csv");
     expect(screen.queryByText("fatura-1.csv")).not.toBeInTheDocument();
+  });
+
+  it("explains why the API refused the upload", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const body = { file: ["This file was already imported (statement #2)"] };
+    // The mocked ApiError ignores its arguments, so set the body explicitly.
+    const error = Object.assign(new ApiError(422, body), { body });
+    vi.mocked(statementsApi.upload).mockRejectedValue(error);
+    render(<Statements />);
+    await screen.findByText("fatura-1.csv");
+
+    await userEvent.upload(screen.getByLabelText("Statement file"), new File(["x"], "again.csv", { type: "text/csv" }));
+    await userEvent.click(screen.getByRole("button", { name: "Upload" }));
+
+    expect(alert).toHaveBeenCalledWith("Failed to upload file: This file was already imported (statement #2)");
+  });
+
+  it("mentions the suggestions being generated after an upload", async () => {
+    vi.mocked(statementsApi.upload).mockResolvedValue({
+      statement: statement(3, "2025-03-01"),
+      summary_lines: [],
+      suggestion_run: { id: 1 } as never,
+    });
+    render(
+      <MemoryRouter>
+        <Statements />
+      </MemoryRouter>
+    );
+    await screen.findByText("fatura-1.csv");
+
+    await userEvent.upload(screen.getByLabelText("Statement file"), new File(["x"], "april.csv", { type: "text/csv" }));
+    await userEvent.click(screen.getByRole("button", { name: "Upload" }));
+
+    expect(await screen.findByTestId("suggesting-note")).toBeInTheDocument();
   });
 });

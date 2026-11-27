@@ -2,7 +2,8 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { keywordsApi, subcategoriesApi } from "../api";
-import { keyword, subcategory } from "../test/fixtures";
+import { MemoryRouter } from "react-router-dom";
+import { keyword, keywordHealth, subcategory } from "../test/fixtures";
 import KeywordsCrud from "./KeywordsCrud";
 
 vi.mock("../api", async () => (await import("../test/mockApi")).mockApiModule());
@@ -31,7 +32,7 @@ describe("KeywordsCrud", () => {
     await userEvent.selectOptions(within(dialog).getByLabelText("Subcategory"), "20");
     await userEvent.click(within(dialog).getByRole("button", { name: "Add Keyword" }));
 
-    expect(keywordsApi.create).toHaveBeenCalledWith({ name: "UBER", subcategory_id: 20 });
+    expect(keywordsApi.create).toHaveBeenCalledWith({ name: "UBER", subcategory_id: 20, min_amount: null, max_amount: null });
     expect(await screen.findByText("UBER")).toBeInTheDocument();
   });
 
@@ -45,7 +46,7 @@ describe("KeywordsCrud", () => {
     await userEvent.type(input, " SP");
     await userEvent.click(screen.getByRole("button", { name: "Update Keyword" }));
 
-    expect(keywordsApi.update).toHaveBeenCalledWith(100, { name: "IFOOD SP", subcategory_id: 10 });
+    expect(keywordsApi.update).toHaveBeenCalledWith(100, { name: "IFOOD SP", subcategory_id: 10, min_amount: null, max_amount: null });
     expect(await screen.findByText("IFOOD SP")).toBeInTheDocument();
   });
 
@@ -69,4 +70,64 @@ describe("KeywordsCrud", () => {
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByText("IFOOD")).toBeInTheDocument();
   });
+
+  it("shows rule health and filters the rules that need attention", async () => {
+    vi.mocked(keywordsApi.list).mockResolvedValue([keyword(), keyword({ id: 101, name: "PIX" }), keyword({ id: 102, name: "NADA" })]);
+    vi.mocked(keywordsApi.health).mockResolvedValue([
+      keywordHealth(),
+      keywordHealth({ keyword_id: 101, matches: 4, overrides: 6, flags: ["overridden", "overlapping"], pending_suggestion_ids: [9] }),
+      keywordHealth({ keyword_id: 102, matches: 0, flags: ["unused"] }),
+    ]);
+    render(
+      <MemoryRouter>
+        <KeywordsCrud />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByTestId("health-101")).toHaveTextContent("4 matchesOverridden 6×Overlaps");
+    expect(screen.getByTestId("health-102")).toHaveTextContent("Never matches");
+    expect(within(screen.getByTestId("health-101")).getByRole("link", { name: "Suggested fix →" })).toHaveAttribute("href", "/suggestions?tab=rules");
+
+    await userEvent.click(screen.getByLabelText("Needs attention (2)"));
+    expect(screen.queryByText("IFOOD")).not.toBeInTheDocument();
+    expect(screen.getByText("PIX")).toBeInTheDocument();
+  });
+
+  it("creates a keyword limited to an amount range and shows the range", async () => {
+    vi.mocked(keywordsApi.create).mockResolvedValue(
+      keyword({ id: 102, name: "AMAZON", subcategory_id: 20, min_amount: 1000, max_amount: null, subcategory: subcategory({ id: 20, name: "Uber" }) })
+    );
+    render(<KeywordsCrud />);
+    await screen.findByText("IFOOD");
+
+    await userEvent.click(screen.getByRole("button", { name: "+ Add Keyword" }));
+    const dialog = screen.getByRole("dialog");
+    await userEvent.type(within(dialog).getByLabelText("Keyword Name"), "AMAZON");
+    await userEvent.selectOptions(within(dialog).getByLabelText("Subcategory"), "20");
+    await userEvent.type(within(dialog).getByLabelText("Minimum amount"), "1.000,00");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Add Keyword" }));
+
+    expect(keywordsApi.create).toHaveBeenCalledWith({ name: "AMAZON", subcategory_id: 20, min_amount: 1000, max_amount: null });
+    const row = (await screen.findByText("AMAZON")).closest("tr")!;
+    expect(row).toHaveTextContent(/from R\$\s?1\.000,00/);
+    expect(within(screen.getByText("IFOOD").closest("tr")!).getByText("Any")).toBeInTheDocument();
+  });
+
+  it("refuses an inverted amount range", async () => {
+    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
+    render(<KeywordsCrud />);
+    await screen.findByText("IFOOD");
+
+    await userEvent.click(screen.getByRole("button", { name: "+ Add Keyword" }));
+    const dialog = screen.getByRole("dialog");
+    await userEvent.type(within(dialog).getByLabelText("Keyword Name"), "AMAZON");
+    await userEvent.selectOptions(within(dialog).getByLabelText("Subcategory"), "20");
+    await userEvent.type(within(dialog).getByLabelText("Minimum amount"), "200");
+    await userEvent.type(within(dialog).getByLabelText("Maximum amount"), "100");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Add Keyword" }));
+
+    expect(alert).toHaveBeenCalledWith("The minimum amount can't be above the maximum.");
+    expect(keywordsApi.create).not.toHaveBeenCalled();
+  });
 });
+

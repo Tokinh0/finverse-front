@@ -3,6 +3,7 @@ import type { HealthTrendCategory } from "../../types";
 import { formatCurrency } from "../../utils/formatter";
 import { INK, compactBRL, delta, shortMonth } from "../../utils/health";
 import { DeltaText } from "./StatTile";
+import { useI18n } from "../../i18n/context";
 
 interface Props {
   months: string[];
@@ -12,7 +13,6 @@ interface Props {
   showTotals: boolean;
 }
 
-const HIDDEN = "R$ •••";
 
 interface TooltipProps {
   active?: boolean;
@@ -22,6 +22,8 @@ interface TooltipProps {
 }
 
 function TrendTooltip({ active, label, payload, showTotals }: TooltipProps) {
+  const { t } = useI18n();
+  const HIDDEN = t.common.hiddenAmount;
   if (!active || !payload?.length) return null;
   const total = payload.reduce((sum, p) => sum + (p.value || 0), 0);
   return (
@@ -37,7 +39,7 @@ function TrendTooltip({ active, label, payload, showTotals }: TooltipProps) {
         </div>
       ))}
       <div className="health-tooltip-row border-top mt-1 pt-1 fw-semibold">
-        <span>Total</span>
+        <span>{t.common.total}</span>
         <span>{showTotals ? formatCurrency(total) : HIDDEN}</span>
       </div>
     </div>
@@ -45,6 +47,9 @@ function TrendTooltip({ active, label, payload, showTotals }: TooltipProps) {
 }
 
 export default function CategoryTrendChart({ months, totals, categories, colors, showTotals }: Props) {
+  const { t } = useI18n();
+  const h = t.health;
+  const HIDDEN = t.common.hiddenAmount;
   // Stack in a fixed order (by color slot) so a category always sits in the same place.
   const stacked = [...categories].sort((a, b) => a.id - b.id);
   const data = months.map((month, i) => ({
@@ -55,7 +60,7 @@ export default function CategoryTrendChart({ months, totals, categories, colors,
 
   return (
     <div className="health-grid">
-      <div className="health-legend" aria-label="Legend">
+      <div className="health-legend" aria-label={t.common.legend}>
         {stacked.map((c) => (
           <span key={c.id}>
             <span className="health-swatch" style={{ background: colors.get(c.id) }} />
@@ -64,7 +69,7 @@ export default function CategoryTrendChart({ months, totals, categories, colors,
         ))}
       </div>
 
-      <div style={{ width: "100%", height: 300 }} role="img" aria-label={`Monthly spending by category, ${shortMonth(months[0])} to ${shortMonth(months[months.length - 1])}`}>
+      <div style={{ width: "100%", height: 300 }} role="img" aria-label={h.trendAria(shortMonth(months[0]), shortMonth(months[months.length - 1]))}>
         <ResponsiveContainer>
           <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 8 }} barCategoryGap="28%">
             <CartesianGrid vertical={false} stroke={INK.grid} />
@@ -97,15 +102,15 @@ export default function CategoryTrendChart({ months, totals, categories, colors,
 
       <div className="health-table-wrap">
         <table className="health-table">
-          <caption className="visually-hidden">Category spending: last month vs the month before and the 6-month average</caption>
+          <caption className="visually-hidden">{h.trendCaption}</caption>
           <thead>
             <tr>
-              <th>Category</th>
+              <th>{h.category}</th>
               <th className="num">{shortMonth(months[months.length - 1])}</th>
               <th className="num">{shortMonth(months[months.length - 2])}</th>
-              <th className="num">vs prev.</th>
-              <th className="num">6-mo avg</th>
-              <th className="num">vs avg</th>
+              <th className="num">{h.vsPrevious}</th>
+              <th className="num">{h.sixMonthAverage}</th>
+              <th className="num">{h.vsAverage}</th>
             </tr>
           </thead>
           <tbody>
@@ -129,7 +134,7 @@ export default function CategoryTrendChart({ months, totals, categories, colors,
               </tr>
             ))}
             <tr className="fw-semibold">
-              <td>All spending</td>
+              <td>{h.allSpending}</td>
               <td className="num">{showTotals ? formatCurrency(totals[totals.length - 1]) : HIDDEN}</td>
               <td className="num">{showTotals ? formatCurrency(totals[totals.length - 2]) : HIDDEN}</td>
               <td className="num">

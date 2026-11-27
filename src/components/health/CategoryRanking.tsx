@@ -2,6 +2,7 @@ import type { HealthCategory } from "../../types";
 import { formatCurrency } from "../../utils/formatter";
 import { delta, formatPct } from "../../utils/health";
 import { DeltaText } from "./StatTile";
+import { useI18n } from "../../i18n/context";
 
 interface Props {
   categories: HealthCategory[];
@@ -10,13 +11,14 @@ interface Props {
   comparison: string;
 }
 
-const HIDDEN = "R$ •••";
 // Labels inside a fill are white, except near-black on the yellow slot.
 const labelInk = (color: string) => (color.toLowerCase() === "#f2a600" ? "#0b0b0b" : "#ffffff");
 
 export default function CategoryRanking({ categories, colors, showTotals, comparison }: Props) {
+  const { t } = useI18n();
+  const HIDDEN = t.common.hiddenAmount;
   const spending = categories.filter((c) => c.total > 0);
-  if (spending.length === 0) return <p className="health-sub">No spending in this period.</p>;
+  if (spending.length === 0) return <p className="health-sub">{t.health.noSpending}</p>;
 
   const max = Math.max(...spending.map((c) => c.total));
 
@@ -25,7 +27,7 @@ export default function CategoryRanking({ categories, colors, showTotals, compar
       <div
         className="health-segbar"
         role="img"
-        aria-label={`Share of spending: ${spending.map((c) => `${c.name} ${formatPct(c.share)}`).join(", ")}`}
+        aria-label={t.health.shareOfSpending(spending.map((c) => `${c.name} ${formatPct(c.share)}`).join(", "))}
       >
         {spending.map((c) => {
           const color = colors.get(c.id) ?? "#9a9a9a";
@@ -67,7 +69,7 @@ export default function CategoryRanking({ categories, colors, showTotals, compar
                     .slice(0, 3)
                     .map((s) => (showTotals ? `${s.name} ${formatCurrency(s.total)}` : s.name))
                     .join(" · ")}
-                  {c.subcategories.length > 3 ? ` · +${c.subcategories.length - 3} more` : ""}
+                  {c.subcategories.length > 3 ? t.health.more(c.subcategories.length - 3) : ""}
                 </div>
               )}
             </div>

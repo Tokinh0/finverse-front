@@ -70,4 +70,79 @@ describe("RecategorizeModal", () => {
 
     expect(await screen.findByText("Subcategory must exist")).toBeInTheDocument();
   });
+
+  it("sends the owner's reason so future suggestions can use it", async () => {
+    vi.mocked(transactionsApi.recategorize).mockResolvedValue({ transaction: transaction(), keyword: null, updated_count: 0 });
+    renderModal();
+
+    await userEvent.selectOptions(screen.getByLabelText("Subcategory"), "10");
+    await userEvent.type(screen.getByLabelText("Why? (optional)"), "  Snack bar near the office ");
+    expect(screen.getByLabelText("Why? (optional)")).toHaveAttribute("maxlength", "300");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(transactionsApi.recategorize).toHaveBeenCalledWith(1000, {
+      subcategory_id: 10,
+      transaction_type: "debit",
+      reason: "Snack bar near the office",
+    });
+  });
+
+  it("pre-selects a suggested subcategory", () => {
+    render(
+      <RecategorizeModal transaction={transaction()} initialSubcategoryId={10} categories={categories} showTotals onHide={vi.fn()} onSaved={vi.fn()} />
+    );
+
+    expect(screen.getByLabelText("Subcategory")).toHaveValue("10");
+  });
+
+  it("marks an uncategorized transaction as 'no idea'", async () => {
+    vi.mocked(transactionsApi.markUnknown).mockResolvedValue(transaction({ unknown_marked: true }));
+    const onMarkedUnknown = vi.fn();
+    render(
+      <RecategorizeModal
+        transaction={transaction({ categorization_source: "uncategorized" })}
+        categories={categories}
+        showTotals
+        onHide={vi.fn()}
+        onSaved={vi.fn()}
+        onMarkedUnknown={onMarkedUnknown}
+      />
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "🤷 No idea what this is" }));
+
+    expect(transactionsApi.markUnknown).toHaveBeenCalledWith(1000);
+    expect(onMarkedUnknown).toHaveBeenCalled();
+  });
+
+  it("doesn't offer 'no idea' for categorized or already marked transactions", () => {
+    const { rerender } = render(
+      <RecategorizeModal transaction={transaction({ categorization_source: "manual" })} categories={categories} showTotals onHide={vi.fn()} onSaved={vi.fn()} onMarkedUnknown={vi.fn()} />
+    );
+    expect(screen.queryByRole("button", { name: /No idea/ })).not.toBeInTheDocument();
+
+    rerender(
+      <RecategorizeModal
+        transaction={transaction({ categorization_source: "uncategorized", unknown_marked: true })}
+        categories={categories}
+        showTotals
+        onHide={vi.fn()}
+        onSaved={vi.fn()}
+        onMarkedUnknown={vi.fn()}
+      />
+    );
+    expect(screen.queryByRole("button", { name: /No idea/ })).not.toBeInTheDocument();
+  });
+
+  it("creates a keyword limited to an amount range", async () => {
+    vi.mocked(transactionsApi.recategorize).mockResolvedValue({ transaction: transaction(), keyword: null, updated_count: 0 });
+    renderModal();
+
+    await userEvent.selectOptions(screen.getByLabelText("Subcategory"), "10");
+    await userEvent.click(screen.getByLabelText(/Create a keyword/));
+    await userEvent.type(screen.getByLabelText("Minimum amount"), "100");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(transactionsApi.recategorize).toHaveBeenCalledWith(1000, expect.objectContaining({ keyword: "LANCHONETE EXEMPLO", min_amount: 100, max_amount: null }));
+  });
 });

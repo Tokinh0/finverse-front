@@ -3,22 +3,23 @@ import { Alert, Badge, Button, Container, Form, ListGroup } from "react-bootstra
 import { Link, useSearchParams } from "react-router-dom";
 import { alertsApi, categoriesApi, transactionsApi } from "../api";
 import { ErrorMessage, Loading } from "../components/LoadingState";
+import { useI18n } from "../i18n/context";
 import RecategorizeModal from "../components/transactions/RecategorizeModal";
 import type { AlertKind, AlertsResponse, Category, ChargeAlert, Transaction } from "../types";
 import { formatIsoDate, formatMonth } from "../utils/dates";
 import { formatCurrency } from "../utils/formatter";
+import { messages } from "../i18n/locale";
 
 interface Props {
   showTotals: boolean;
 }
 
-const ALERT_KINDS: { kind: AlertKind; title: string; hint: string; variant: string }[] = [
-  { kind: "duplicate", title: "Possible duplicates", hint: "Same merchant and amount charged twice on the same day.", variant: "danger" },
-  { kind: "amount_changed", title: "Recurring charge changed", hint: "A monthly charge that used to have a stable amount.", variant: "warning" },
-  { kind: "unusual_amount", title: "Unusually large", hint: "At least 3× what this subcategory usually costs.", variant: "warning" },
-  { kind: "new_merchant", title: "New, uncategorized merchants", hint: "No keyword matched them and they're new in the last 6 months.", variant: "info" },
+const ALERT_KINDS: { kind: AlertKind; variant: string }[] = [
+  { kind: "duplicate", variant: "danger" },
+  { kind: "amount_changed", variant: "warning" },
+  { kind: "unusual_amount", variant: "warning" },
+  { kind: "new_merchant", variant: "info" },
 ];
-
 const alertKey = (alert: ChargeAlert) => `${alert.kind}-${alert.transaction.id}`;
 
 export default function ChargeAlerts({ showTotals }: Props) {
@@ -33,6 +34,9 @@ export default function ChargeAlerts({ showTotals }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [editing, setEditing] = useState<Transaction | null>(null);
+  // `t` is each alert's transaction below, so the messages are `i18n` here.
+  const { t: i18n } = useI18n();
+  const msg = i18n.alerts;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -41,7 +45,7 @@ export default function ChargeAlerts({ showTotals }: Props) {
       setData(await alertsApi.list({ month, include_dismissed: showReviewed || undefined }));
     } catch (err) {
       console.error(err);
-      setError("Could not load alerts.");
+      setError(messages().alerts.loadError);
     } finally {
       setLoading(false);
     }
@@ -82,7 +86,7 @@ export default function ChargeAlerts({ showTotals }: Props) {
       );
     } catch (err) {
       console.error(err);
-      setError("Could not update the alert.");
+      setError(msg.updateError);
     } finally {
       setBusy(null);
     }
@@ -94,9 +98,9 @@ export default function ChargeAlerts({ showTotals }: Props) {
   return (
     <Container className="mt-4 text-start">
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-2">
-        <h2 className="mb-0">Review charges</h2>
+        <h2 className="mb-0">{msg.title}</h2>
         <div className="d-flex flex-wrap align-items-center gap-3">
-          <Form.Select aria-label="Month" value={shownMonth ?? ""} onChange={(e) => setParam("month", e.target.value)} style={{ width: "auto" }}>
+          <Form.Select aria-label={msg.month} value={shownMonth ?? ""} onChange={(e) => setParam("month", e.target.value)} style={{ width: "auto" }}>
             {shownMonth && !months.includes(shownMonth) && <option value={shownMonth}>{formatMonth(shownMonth)}</option>}
             {months.map((m) => (
               <option key={m} value={m}>
@@ -107,26 +111,27 @@ export default function ChargeAlerts({ showTotals }: Props) {
           <Form.Check
             id="show-reviewed"
             type="switch"
-            label="Show reviewed"
+            label={msg.showReviewed}
             checked={showReviewed}
             onChange={(e) => setParam("reviewed", e.target.checked ? "1" : undefined)}
           />
         </div>
       </div>
       <p className="text-muted">
-        Charges worth a second look this month. Mark the ones that are fine, re-categorize the ones that landed in the wrong place.
+        {msg.intro}
       </p>
 
       {error && <ErrorMessage message={error} />}
       {loading && !data ? (
-        <Loading message="Checking charges..." />
+        <Loading message={msg.loading} />
       ) : data && !data.month ? (
-        <Alert variant="secondary">No transactions yet. Upload a statement to get started.</Alert>
+        <Alert variant="secondary">{msg.noTransactions}</Alert>
       ) : data && openCount === 0 && !showReviewed ? (
-        <Alert variant="success">Nothing to review for {formatMonth(data.month!)}.</Alert>
+        <Alert variant="success">{msg.nothingToReview(formatMonth(data.month!))}</Alert>
       ) : (
         <div className="d-grid gap-4" style={{ opacity: loading ? 0.6 : 1 }}>
-          {ALERT_KINDS.map(({ kind, title, hint, variant }) => {
+          {ALERT_KINDS.map(({ kind, variant }) => {
+            const { title, hint } = msg.kinds[kind];
             const alerts = data?.alerts.filter((a) => a.kind === kind) ?? [];
             if (alerts.length === 0) return null;
 
@@ -152,17 +157,17 @@ export default function ChargeAlerts({ showTotals }: Props) {
                             {formatIsoDate(t.transaction_date)} · {t.category?.name} / {t.subcategory?.name}
                           </div>
                           {/* amount_changed / unusual_amount messages contain amounts */}
-                          <div className="small">{showTotals || kind === "duplicate" || kind === "new_merchant" ? alert.message : "Details hidden (amounts are off)"}</div>
+                          <div className="small">{showTotals || kind === "duplicate" || kind === "new_merchant" ? alert.message : msg.detailsHidden}</div>
                         </div>
                         <div className="fw-semibold text-nowrap" style={{ fontVariantNumeric: "tabular-nums" }}>
-                          {showTotals ? formatCurrency(t.amount) : "R$ •••"}
+                          {showTotals ? formatCurrency(t.amount) : i18n.common.hiddenAmount}
                         </div>
                         <div className="d-flex gap-2">
                           <Link className="btn btn-sm btn-outline-secondary" to={`/transactions?q=${encodeURIComponent(t.name)}`}>
-                            Similar
+                            {msg.similar}
                           </Link>
                           <Button size="sm" variant="outline-secondary" onClick={() => setEditing(t)}>
-                            Re-categorize
+                            {i18n.transactions.recategorize}
                           </Button>
                           <Button
                             size="sm"
@@ -170,7 +175,7 @@ export default function ChargeAlerts({ showTotals }: Props) {
                             disabled={busy === alertKey(alert)}
                             onClick={() => toggleReviewed(alert)}
                           >
-                            {alert.dismissed ? "Undo" : "Looks fine"}
+                            {alert.dismissed ? i18n.common.undo : msg.looksFine}
                           </Button>
                         </div>
                       </ListGroup.Item>

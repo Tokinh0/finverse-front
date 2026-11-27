@@ -4,17 +4,18 @@ import { describe, expect, it, vi } from "vitest";
 import { asset } from "../../test/fixtures";
 import AssetFormModal from "./AssetFormModal";
 import { EMPTY_ASSET_FORM, validateAsset } from "./assetForm";
+import { inLocale } from "../../test/i18n";
 
 const assetTypes = { reserva: "Reserva", criptomoedas: "Criptomoedas" };
 
 describe("validateAsset", () => {
   it("requires type, description, a valid value, rating 1-10 and a positive quantity", () => {
     expect(validateAsset({ ...EMPTY_ASSET_FORM, current_value: "abc", rating: 11 })).toEqual({
-      asset_type: "Tipo de ativo é obrigatório",
-      description: "Descrição é obrigatória",
-      current_value: "Valor inválido",
-      rating: "Nota deve ser entre 1 e 10",
-      quantity: "Quantidade deve ser maior que 0",
+      asset_type: "Asset type is required",
+      description: "Description is required",
+      current_value: "Invalid value",
+      rating: "Rating must be between 1 and 10",
+      quantity: "Quantity must be greater than 0",
     });
   });
 });
@@ -24,10 +25,10 @@ describe("AssetFormModal", () => {
     const onSave = vi.fn();
     render(<AssetFormModal open mode="create" onClose={vi.fn()} onSave={onSave} assetTypes={assetTypes} />);
 
-    await userEvent.click(screen.getByRole("button", { name: "Adicionar" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add" }));
 
     expect(onSave).not.toHaveBeenCalled();
-    expect(screen.getByText("Descrição é obrigatória")).toBeInTheDocument();
+    expect(screen.getByText("Description is required")).toBeInTheDocument();
   });
 
   it("edits an asset and sends the parsed amount", async () => {
@@ -35,11 +36,11 @@ describe("AssetFormModal", () => {
     const onClose = vi.fn();
     render(<AssetFormModal open mode="edit" asset={asset()} onClose={onClose} onSave={onSave} assetTypes={assetTypes} />);
 
-    const value = screen.getByLabelText(/Valor Atual/);
+    const value = screen.getByLabelText(/Current value/);
     expect(value).toHaveValue("1500");
     await userEvent.clear(value);
     await userEvent.type(value, "2.345,67");
-    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     expect(onSave).toHaveBeenCalledWith({
       ticker: "CDB",
@@ -57,6 +58,15 @@ describe("AssetFormModal", () => {
 
     await userEvent.click(screen.getByRole("combobox"));
 
-    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["Reserva", "Criptomoedas"]);
+    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["Emergency reserve", "Crypto"]);
+  });
+
+  it("speaks Portuguese when that is the language", async () => {
+    render(inLocale("pt-BR", <AssetFormModal open mode="create" onClose={vi.fn()} onSave={vi.fn()} assetTypes={assetTypes} />));
+
+    await userEvent.click(screen.getByRole("button", { name: "Adicionar" }));
+
+    expect(screen.getByText("Adicionar novo ativo")).toBeInTheDocument();
+    expect(screen.getByText("Descrição é obrigatória")).toBeInTheDocument();
   });
 });

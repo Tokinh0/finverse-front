@@ -34,7 +34,7 @@ describe("SubcategoryTooltip", () => {
     expect(screen.getByText("FOOD (50.0%)")).toBeInTheDocument();
     expect(screen.getByText("R$ 410.00 - Total")).toBeInTheDocument();
     const items = screen.getAllByRole("listitem");
-    expect(items[0]).toHaveTextContent("15/01/2025 - R$ 10.00 - UBER EATS");
+    expect(items[0]).toHaveTextContent("01/15/2025 - R$ 10.00 - UBER EATS"); // the API's dd/mm/yyyy, shown month-first in English
     expect(items[1]).toHaveStyle({ color: "rgb(255, 0, 0)" });
   });
 

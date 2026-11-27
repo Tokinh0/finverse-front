@@ -34,6 +34,8 @@ import { assetsApi, type AssetParams } from "../api"
 import AssetFormModal from "../components/assets/AssetFormModal"
 import type { Asset, AssetTypes, PortfolioSlice } from "../types"
 import { formatCurrency } from "../utils/formatter"
+import { useI18n } from '../i18n/context'
+import { messages } from '../i18n/locale'
 
 type SnackbarInfo = { open: boolean; message: string; severity: 'success' | 'error' }
 
@@ -63,6 +65,9 @@ export default function PortfolioDashboard({ showTotals }: Props) {
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<Mode>('create')
+  const { t } = useI18n()
+  const pf = t.portfolio
+  const typeLabel = (key: string) => pf.types[key] ?? assetTypes[key] ?? key
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
   const [snackbar, setSnackbar] = useState<SnackbarInfo>({ open: false, message: '', severity: 'success' })
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -139,13 +144,13 @@ export default function PortfolioDashboard({ showTotals }: Props) {
           open: true,
           message:
             modalMode === 'create'
-              ? 'Ativo adicionado com sucesso!'
-              : 'Ativo atualizado com sucesso!',
+              ? messages().portfolio.added
+              : messages().portfolio.updated,
           severity: 'success',
         })
       } catch (err) {
         console.error(err)
-        setSnackbar({ open: true, message: 'Erro ao salvar o ativo.', severity: 'error' })
+        setSnackbar({ open: true, message: messages().portfolio.saveError, severity: 'error' })
       } finally {
         setLoading(false)
         setModalOpen(false)
@@ -160,10 +165,10 @@ export default function PortfolioDashboard({ showTotals }: Props) {
     try {
       await assetsApi.remove(assetToDelete)
       setAssets(prev => prev.filter(a => a.id !== assetToDelete))
-      setSnackbar({ open: true, message: 'Ativo excluído com sucesso!', severity: 'success' })
+      setSnackbar({ open: true, message: messages().portfolio.deleted, severity: 'success' })
     } catch (err) {
       console.error(err)
-      setSnackbar({ open: true, message: 'Erro ao excluir o ativo.', severity: 'error' })
+      setSnackbar({ open: true, message: messages().portfolio.deleteError, severity: 'error' })
     } finally {
       setLoading(false)
       setConfirmOpen(false)
@@ -180,7 +185,7 @@ export default function PortfolioDashboard({ showTotals }: Props) {
     return (
       <ThemeProvider theme={darkTheme}>
         <Box sx={{ p: 3 }}>
-          <Typography>Carregando...</Typography>
+          <Typography>{pf.loading}</Typography>
         </Box>
       </ThemeProvider>
     )
@@ -192,10 +197,10 @@ export default function PortfolioDashboard({ showTotals }: Props) {
         {/* Header with filter chips and add button */}
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {Object.entries({ [ALL]: ALL, ...assetTypes }).map(([key, value]) => (
+            {[ALL, ...Object.keys(assetTypes)].map((key) => (
               <Chip
                 key={key}
-                label={value}
+                label={key === ALL ? pf.all : typeLabel(key)}
                 onClick={() => setActiveFilter(key)}
                 color={activeFilter === key ? 'primary' : 'default'}
                 clickable
@@ -208,7 +213,7 @@ export default function PortfolioDashboard({ showTotals }: Props) {
             onClick={handleAddAsset}
             sx={{ borderRadius: 2, textTransform: 'none' }}
           >
-            Adicionar ativo
+            {pf.addAsset}
           </Button>
         </Box>
 
@@ -218,27 +223,27 @@ export default function PortfolioDashboard({ showTotals }: Props) {
             <Card sx={{ bgcolor: 'background.paper' }}>
               <CardContent>
                 <Typography variant="h5" fontWeight="bold" gutterBottom>
-                  Lista de Ativos
+                  {pf.assetList}
                 </Typography>
                 <TableContainer component={Paper} sx={{ bgcolor: 'background.paper' }}>
                   <Table>
                     <TableHead>
                       <TableRow sx={{ bgcolor: '#eab308' }}>
-                        <TableCell>Tipo</TableCell>
-                        <TableCell>Description</TableCell>
-                        <TableCell>Ticker</TableCell>
-                        <TableCell>Valor atual</TableCell>
-                        <TableCell>% p/tipo</TableCell>
-                        <TableCell>Nota</TableCell>
-                        <TableCell>Quantidade</TableCell>
-                        <TableCell align="center">Ações</TableCell>
+                        <TableCell>{pf.columns.type}</TableCell>
+                        <TableCell>{pf.columns.description}</TableCell>
+                        <TableCell>{pf.columns.ticker}</TableCell>
+                        <TableCell>{pf.columns.currentValue}</TableCell>
+                        <TableCell>{pf.columns.sharePerType}</TableCell>
+                        <TableCell>{pf.columns.rating}</TableCell>
+                        <TableCell>{pf.columns.quantity}</TableCell>
+                        <TableCell align="center">{pf.columns.actions}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {filteredAssets.map(asset => (
                         <TableRow key={asset.id} hover>
                           <TableCell>
-                            <Chip label={assetTypes[asset.asset_type] ?? asset.asset_type} size="small" sx={{ backgroundColor: asset.color_code ?? undefined }} />
+                            <Chip label={typeLabel(asset.asset_type)} size="small" sx={{ backgroundColor: asset.color_code ?? undefined }} />
                           </TableCell>
                           <TableCell>{asset.description}</TableCell>
                           <TableCell>{asset.ticker}</TableCell>
@@ -253,7 +258,7 @@ export default function PortfolioDashboard({ showTotals }: Props) {
                               size="small"
                               onClick={() => handleEditAsset(asset)}
                               startIcon={<EditIcon />}
-                              aria-label={`Editar ${asset.ticker}`}
+                              aria-label={pf.edit(asset.ticker)}
                             />
                             <Button
                               size="small"
@@ -262,7 +267,7 @@ export default function PortfolioDashboard({ showTotals }: Props) {
                                 setConfirmOpen(true)
                               }}
                               startIcon={<DeleteIcon />}
-                              aria-label={`Excluir ${asset.ticker}`}
+                              aria-label={pf.remove(asset.ticker)}
                               sx={{ ml: 1 }}
                             />
                           </TableCell>
@@ -280,7 +285,7 @@ export default function PortfolioDashboard({ showTotals }: Props) {
             <Card sx={{ bgcolor: 'background.paper', minWidth: '20rem' }}>
               <CardContent>
                 <Typography variant="h5" fontWeight="bold" gutterBottom>
-                  Carteira
+                  {pf.portfolio}
                 </Typography>
 
                 <Box sx={{ position: 'relative', mb: 3, height: 200 }}>
@@ -338,7 +343,7 @@ export default function PortfolioDashboard({ showTotals }: Props) {
                           }}
                         />
                         <Typography variant="body2" color="text.secondary">
-                          {assetTypes[item.name] ?? item.name}
+                          {typeLabel(item.name)}
                         </Typography>
                       </Box>
                       <Typography variant="body2" color="text.secondary">
@@ -363,13 +368,11 @@ export default function PortfolioDashboard({ showTotals }: Props) {
         />
 
         <Dialog open={confirmOpen} onClose={() => { if (!loading) setConfirmOpen(false) }}>
-          <DialogTitle>Confirmar Exclusão</DialogTitle>
-          <DialogContent>
-            Você tem certeza que deseja excluir este ativo?
-          </DialogContent>
+          <DialogTitle>{pf.confirmDeleteTitle}</DialogTitle>
+          <DialogContent>{pf.confirmDelete}</DialogContent>
           <DialogActions>
             <Button onClick={() => setConfirmOpen(false)} disabled={loading}>
-              Cancelar
+              {t.common.cancel}
             </Button>
             <Button
               onClick={handleDelete}
@@ -377,7 +380,7 @@ export default function PortfolioDashboard({ showTotals }: Props) {
               disabled={loading}
               startIcon={loading ? <CircularProgress size={16} /> : null}
             >
-              {loading ? 'Excluindo...' : 'Excluir'}
+              {loading ? pf.deleting : t.common.delete}
             </Button>
           </DialogActions>
         </Dialog>

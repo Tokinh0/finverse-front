@@ -36,7 +36,7 @@ describe("MonthlyByCategory", () => {
 
     render(<MonthlyByCategory />);
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Erro ao carregar o relatório");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not load the report");
   });
 });
 

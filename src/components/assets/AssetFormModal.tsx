@@ -19,6 +19,7 @@ import type { AssetParams } from "../../api";
 import type { Asset, AssetTypes } from "../../types";
 import { parseAmount } from "../../utils/formatter";
 import { EMPTY_ASSET_FORM as EMPTY_FORM, validateAsset, type AssetFormErrors as FormErrors, type AssetFormValues as FormValues } from "./assetForm";
+import { useI18n } from "../../i18n/context";
 
 interface Props {
   open: boolean;
@@ -31,6 +32,8 @@ interface Props {
 }
 
 export default function AssetFormModal({ open, onClose, onSave, asset, mode, assetTypes }: Props) {
+  const { t } = useI18n();
+  const f = t.assetForm;
   const [formData, setFormData] = useState<FormValues>(EMPTY_FORM);
   const [errors, setErrors] = useState<FormErrors>({});
 
@@ -82,9 +85,9 @@ export default function AssetFormModal({ open, onClose, onSave, asset, mode, ass
     >
       <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <Typography variant="h6" component="span">
-          {mode === "create" ? "Adicionar Novo Ativo" : "Editar Ativo"}
+          {mode === "create" ? f.newTitle : f.editTitle}
         </Typography>
-        <Button onClick={handleClose} sx={{ minWidth: "auto", p: 1 }} color="inherit" aria-label="Fechar">
+        <Button onClick={handleClose} sx={{ minWidth: "auto", p: 1 }} color="inherit" aria-label={f.close}>
           <CloseIcon />
         </Button>
       </DialogTitle>
@@ -92,24 +95,24 @@ export default function AssetFormModal({ open, onClose, onSave, asset, mode, ass
       <DialogContent>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 3, pt: 1 }}>
           <TextField
-            label="Ticker"
+            label={f.ticker}
             value={formData.ticker}
             onChange={(e) => handleInputChange("ticker", e.target.value)}
             fullWidth
-            placeholder="Ex: AAPL, PETR4, BTC"
+            placeholder={f.tickerPlaceholder}
           />
 
           <FormControl fullWidth error={!!errors.asset_type}>
-            <InputLabel id="asset-type-label">Tipo de Ativo</InputLabel>
+            <InputLabel id="asset-type-label">{f.type}</InputLabel>
             <Select
               labelId="asset-type-label"
               value={formData.asset_type}
               onChange={(e) => handleInputChange("asset_type", e.target.value)}
-              label="Tipo de Ativo"
+              label={f.type}
             >
               {typeOptions.map(([key, value]) => (
                 <MenuItem key={key} value={key}>
-                  {value}
+                  {t.portfolio.types[key] ?? value}
                 </MenuItem>
               ))}
             </Select>
@@ -121,7 +124,7 @@ export default function AssetFormModal({ open, onClose, onSave, asset, mode, ass
           </FormControl>
 
           <TextField
-            label="Descrição"
+            label={f.description}
             value={formData.description}
             onChange={(e) => handleInputChange("description", e.target.value)}
             error={!!errors.description}
@@ -129,11 +132,11 @@ export default function AssetFormModal({ open, onClose, onSave, asset, mode, ass
             fullWidth
             multiline
             rows={3}
-            placeholder="Descreva o ativo..."
+            placeholder={f.descriptionPlaceholder}
           />
 
           <TextField
-            label="Valor Atual"
+            label={f.currentValue}
             value={formData.current_value}
             onChange={(e) => handleInputChange("current_value", e.target.value)}
             error={!!errors.current_value}
@@ -144,18 +147,18 @@ export default function AssetFormModal({ open, onClose, onSave, asset, mode, ass
           />
 
           <TextField
-            label="Nota"
+            label={f.rating}
             type="number"
             value={formData.rating}
             onChange={(e) => handleInputChange("rating", Number.parseInt(e.target.value) || 1)}
             error={!!errors.rating}
-            helperText={errors.rating || "Nota de 1 a 10"}
+            helperText={errors.rating || f.ratingHelp}
             fullWidth
             inputProps={{ min: 1, max: 10, step: 1 }}
           />
 
           <TextField
-            label="Quantidade"
+            label={f.quantity}
             type="number"
             value={formData.quantity}
             onChange={(e) => handleInputChange("quantity", Number.parseFloat(e.target.value) || 0)}
@@ -170,14 +173,14 @@ export default function AssetFormModal({ open, onClose, onSave, asset, mode, ass
 
       <DialogActions sx={{ p: 3, pt: 1 }}>
         <Button onClick={handleClose} color="inherit">
-          Cancelar
+          {t.common.cancel}
         </Button>
         <Button
           onClick={handleSave}
           variant="contained"
           sx={{ backgroundColor: "#eab308", color: "#000000", "&:hover": { backgroundColor: "#d97706" } }}
         >
-          {mode === "create" ? "Adicionar" : "Salvar"}
+          {mode === "create" ? f.add : t.common.save}
         </Button>
       </DialogActions>
     </Dialog>
