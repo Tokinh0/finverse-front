@@ -1,5 +1,10 @@
+import InsightsOutlined from "@mui/icons-material/InsightsOutlined";
+import MenuBookOutlined from "@mui/icons-material/MenuBookOutlined";
+import ReceiptLongOutlined from "@mui/icons-material/ReceiptLongOutlined";
+import RuleOutlined from "@mui/icons-material/RuleOutlined";
+import SyncOutlined from "@mui/icons-material/SyncOutlined";
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Container, Nav } from "react-bootstrap";
+import { Alert, Button, Container, Nav } from "react-bootstrap";
 import { useSearchParams } from "react-router-dom";
 import { ApiError, categoriesApi, reportsApi, suggestionsApi } from "../api";
 import { ErrorMessage, Loading } from "../components/LoadingState";
@@ -7,6 +12,8 @@ import CategorizationProgressChart from "../components/suggestions/Categorizatio
 import CategorySuggestionGroups from "../components/suggestions/CategorySuggestionGroups";
 import RuleSuggestionCard from "../components/suggestions/RuleSuggestionCard";
 import RunStatus from "../components/suggestions/RunStatus";
+import SectionTitle from "../components/suggestions/SectionTitle";
+import SuggestionsGuideModal from "../components/suggestions/SuggestionsGuideModal";
 import { isRunActive, useSuggestionsSummary } from "../hooks/suggestionsSummary";
 import type { CategorizationProgressMonth, Category, CategorySuggestion, Reapply, RuleSuggestion } from "../types";
 
@@ -33,6 +40,7 @@ export default function Suggestions({ showTotals }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ variant: "success" | "danger"; text: string } | null>(null);
   const [starting, setStarting] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -92,10 +100,32 @@ export default function Suggestions({ showTotals }: Props) {
 
   return (
     <Container className="mt-4 text-start">
-      <h2 className="mb-3">Suggestions</h2>
+      <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <h2 className="mb-0">Suggestions</h2>
+        <Button variant="outline-secondary" size="sm" onClick={() => setShowGuide(true)}>
+          <MenuBookOutlined fontSize="small" className="me-1" aria-hidden />
+          How this page works
+        </Button>
+      </div>
 
-      <CategorizationProgressChart months={progress} />
-      <RunStatus summary={summary} starting={starting} onSuggestAgain={suggestAgain} />
+      {progress.some((m) => m.total > 0) && (
+        <section aria-label="Progress">
+          <SectionTitle
+            icon={<InsightsOutlined fontSize="small" />}
+            title="Progress"
+            help="How each month's transactions got their category. As you accept rules, the blue part grows and there's less to review."
+          />
+          <CategorizationProgressChart months={progress} />
+        </section>
+      )}
+      <section aria-label="Last run">
+        <SectionTitle
+          icon={<SyncOutlined fontSize="small" />}
+          title="Last run"
+          help="Suggestions are generated after each import. Your own history is used first; Claude only sees what history couldn't place."
+        />
+        <RunStatus summary={summary} starting={starting} onSuggestAgain={suggestAgain} />
+      </section>
 
       {notice && (
         <Alert variant={notice.variant} dismissible onClose={() => setNotice(null)}>
@@ -105,10 +135,16 @@ export default function Suggestions({ showTotals }: Props) {
 
       <Nav variant="tabs" activeKey={tab} className="mb-3" onSelect={(key) => key && setTab(key as Tab)}>
         <Nav.Item>
-          <Nav.Link eventKey="rules">Rules ({ruleSuggestions.length})</Nav.Link>
+          <Nav.Link eventKey="rules">
+            <RuleOutlined fontSize="small" className="me-1" aria-hidden />
+            Rules ({ruleSuggestions.length})
+          </Nav.Link>
         </Nav.Item>
         <Nav.Item>
-          <Nav.Link eventKey="transactions">Transactions ({categorySuggestions.length})</Nav.Link>
+          <Nav.Link eventKey="transactions">
+            <ReceiptLongOutlined fontSize="small" className="me-1" aria-hidden />
+            Transactions ({categorySuggestions.length})
+          </Nav.Link>
         </Nav.Item>
       </Nav>
 
@@ -171,6 +207,7 @@ export default function Suggestions({ showTotals }: Props) {
           }
         />
       )}
+      <SuggestionsGuideModal show={showGuide} onHide={() => setShowGuide(false)} />
     </Container>
   );
 }

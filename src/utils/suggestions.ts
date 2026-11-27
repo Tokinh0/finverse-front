@@ -23,6 +23,13 @@ export const SOURCE_COLORS: Record<CategorizationSource, string> = {
 };
 export const STACK_ORDER: CategorizationSource[] = ["keyword", "manual", "ai_accepted", "uncategorized"];
 
+/** What each origin means, for tooltips. */
+export const ORIGIN_HELP: Record<"ai" | "history" | "local", string> = {
+  ai: "Claude suggested this from your categories, rules and past choices.",
+  history: "You already put this merchant in this subcategory before. No API call was needed.",
+  local: "Finverse noticed this from your own corrections. No API call was needed.",
+};
+
 export const originLabel = (origin: CategorySuggestion["origin"] | RuleSuggestion["origin"]) =>
   origin === "ai" ? "Claude" : "Your history";
 

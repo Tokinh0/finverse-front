@@ -84,4 +84,12 @@ describe("Suggestions", () => {
 
     expect(screen.getByTestId("merchant-group")).toBeInTheDocument();
   });
+
+  it("opens the page guide", async () => {
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("button", { name: "How this page works" }));
+
+    expect(screen.getByRole("dialog", { name: "How the Suggestions page works" })).toBeInTheDocument();
+  });
 });
