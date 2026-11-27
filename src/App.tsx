@@ -1,7 +1,7 @@
-import { useState } from "react";
 import { Route, Routes } from "react-router-dom";
 import AppNavbar from "./components/Navbar";
 import { SuggestionsSummaryContext, useSuggestionsSummaryState } from "./hooks/suggestionsSummary";
+import { usePersistentToggle } from "./hooks/usePersistentToggle";
 import ChargeAlerts from "./pages/ChargeAlerts";
 import CategorySubcategoryManager from "./pages/CategorySubcategoryManager";
 import Dashboard from "./pages/Dashboard";
@@ -16,8 +16,9 @@ import MonthlyByCategory from "./pages/reports/MonthlyByCategory";
 import MonthlyBySubcategory from "./pages/reports/MonthlyBySubcategory";
 
 export default function App() {
-  // Global privacy toggle: when false, amounts are hidden on reports and the portfolio.
-  const [showTotals, setShowTotals] = useState(false);
+  // Global privacy toggle: when false, amounts are hidden. Saved in the browser, and changed
+  // only by the switch in the navbar.
+  const [showTotals, setShowTotals] = usePersistentToggle("finverse.showTotals", false);
   const suggestions = useSuggestionsSummaryState();
 
   return (
