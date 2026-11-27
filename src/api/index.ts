@@ -22,6 +22,7 @@ import type {
   RecategorizeParams,
   RecategorizeResult,
   Subcategory,
+  Transaction,
   TransactionFilters,
   TransactionsPage,
 } from "../types";
@@ -64,7 +65,7 @@ export const subcategoriesApi = {
     apiRequest<Subcategory>(`/subcategories/${id}`, { method: "PATCH", json: { subcategory } }),
 };
 
-type KeywordParams = { name: string; subcategory_id: number };
+type KeywordParams = { name: string; subcategory_id: number; min_amount?: number | null; max_amount?: number | null };
 
 export const keywordsApi = {
   list: () => apiRequest<Keyword[]>("/keywords"),
@@ -110,6 +111,9 @@ export const transactionsApi = {
   list: (filters: TransactionFilters = {}) => apiRequest<TransactionsPage>(`/transactions${toQuery(filters)}`),
   recategorize: (id: number, transaction: RecategorizeParams) =>
     apiRequest<RecategorizeResult>(`/transactions/${id}`, { method: "PATCH", json: { transaction } }),
+  /** "no idea": keep it in Outros and stop suggesting for it */
+  markUnknown: (id: number) => apiRequest<Transaction>(`/transactions/${id}/unknown`, { method: "POST" }),
+  unmarkUnknown: (id: number) => apiRequest<Transaction>(`/transactions/${id}/unknown`, { method: "DELETE" }),
 };
 
 export const alertsApi = {
@@ -138,10 +142,14 @@ export const suggestionsApi = {
       json: subcategoryId ? { subcategory_id: subcategoryId } : {},
     }),
   rejectCategory: (id: number) => apiRequest<CategorySuggestion>(`/category_suggestions/${id}/reject`, { method: "POST" }),
+  dontKnow: (id: number) => apiRequest<CategorySuggestion>(`/category_suggestions/${id}/dont_know`, { method: "POST" }),
   bulkAccept: (params: { min_confidence?: number; merchant_key?: string }) =>
     apiRequest<{ accepted_count: number }>("/category_suggestions/bulk_accept", { method: "POST", json: params }),
   rules: () => apiRequest<RuleSuggestion[]>("/rule_suggestions"),
-  acceptRule: (id: number, params: { name?: string; subcategory_id?: number; reapply: Reapply }) =>
+  acceptRule: (
+    id: number,
+    params: { name?: string; subcategory_id?: number; min_amount?: number | null; max_amount?: number | null; reapply: Reapply }
+  ) =>
     apiRequest<RuleDecisionResult>(`/rule_suggestions/${id}/accept`, { method: "POST", json: params }),
   rejectRule: (id: number) => apiRequest<RuleDecisionResult>(`/rule_suggestions/${id}/reject`, { method: "POST" }),
 };

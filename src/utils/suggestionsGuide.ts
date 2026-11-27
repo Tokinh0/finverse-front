@@ -105,5 +105,5 @@ export const TRANSACTIONS_STEPS: GuideStep[] = [
   { target: "origin", title: "Source", text: "Claude, or your history (you already categorized this merchant before, no API call). Reasons you write when re-categorizing help both." },
   { target: "reason", title: "Why", text: "A short reason for the suggestion." },
   { target: "transactions", title: "Transactions", text: "Each transaction with its date and amount. Amounts follow the 👁 toggle in the navbar." },
-  { target: "actions", title: "Decide", text: "Accept them all, move them to another subcategory, or reject (that subcategory won't be suggested for this merchant again)." },
+  { target: "actions", title: "Decide", text: "Accept them all, move them to another subcategory, reject (that subcategory won't be suggested for this merchant again), or \"No idea\" when you can't remember: they stay in Outros with a mark and get no more suggestions." },
 ];

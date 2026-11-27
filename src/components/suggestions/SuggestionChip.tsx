@@ -8,13 +8,15 @@ interface Props {
   onAccept: () => void;
   onChange: () => void;
   onReject: () => void;
+  /** "no idea": keep it in Outros and stop suggesting */
+  onDontKnow?: () => void;
 }
 
 /**
  * A pending suggestion shown next to a transaction. The dashed outline and the "Suggested" label
  * keep it visibly different from a confirmed category.
  */
-export default function SuggestionChip({ suggestion, busy, onAccept, onChange, onReject }: Props) {
+export default function SuggestionChip({ suggestion, busy, onAccept, onChange, onReject, onDontKnow }: Props) {
   const label = `${suggestion.category.name} / ${suggestion.subcategory.name}`;
   return (
     <div className="d-flex flex-wrap align-items-center gap-1 mt-1" data-testid="suggestion-chip">
@@ -34,6 +36,19 @@ export default function SuggestionChip({ suggestion, busy, onAccept, onChange, o
       <Button size="sm" variant="outline-danger" className="py-0 px-2" disabled={busy} onClick={onReject} aria-label={`Reject ${label}`}>
         ✕
       </Button>
+      {onDontKnow && (
+        <Button
+          size="sm"
+          variant="outline-secondary"
+          className="py-0 px-2"
+          disabled={busy}
+          onClick={onDontKnow}
+          aria-label="No idea what this is"
+          title="No idea: keep it in Outros and stop suggesting"
+        >
+          ?
+        </Button>
+      )}
     </div>
   );
 }

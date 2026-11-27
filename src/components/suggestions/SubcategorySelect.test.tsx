@@ -21,4 +21,15 @@ describe("SubcategorySelect", () => {
     await userEvent.selectOptions(select, "11");
     expect(onChange).toHaveBeenCalledWith("11");
   });
+
+  it("offers to create a new subcategory instead of selecting one", async () => {
+    const onChange = vi.fn();
+    const onCreateNew = vi.fn();
+    render(<SubcategorySelect label="Move to" value="10" onChange={onChange} onCreateNew={onCreateNew} categories={[category()]} />);
+
+    await userEvent.selectOptions(screen.getByLabelText("Move to"), "+ New subcategory…");
+
+    expect(onCreateNew).toHaveBeenCalled();
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });

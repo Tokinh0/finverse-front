@@ -172,4 +172,34 @@ describe("Transactions", () => {
       expect(await screen.findByTestId("rule-nudge")).toHaveTextContent("Create a rule for this?");
     });
   });
+
+  describe("can't remember", () => {
+    it("answers a suggestion with 'no idea'", async () => {
+      vi.mocked(transactionsApi.list).mockResolvedValue(transactionsPage([transaction({ pending_suggestion: categorySuggestion({ transaction: undefined }) })]));
+      vi.mocked(suggestionsApi.dontKnow).mockResolvedValue(categorySuggestion({ status: "dismissed" }));
+      renderPage();
+
+      const row = (await screen.findByText("LANCHONETE EXEMPLO")).closest("tr")!;
+      await userEvent.click(within(row).getByRole("button", { name: "No idea what this is" }));
+
+      expect(suggestionsApi.dontKnow).toHaveBeenCalledWith(500);
+      expect(await screen.findByText(/Marked as "can't remember"/)).toBeInTheDocument();
+    });
+
+    it("shows the mark with an undo, and filters by it", async () => {
+      vi.mocked(transactionsApi.list).mockResolvedValue(transactionsPage([transaction({ unknown_marked: true })]));
+      vi.mocked(transactionsApi.unmarkUnknown).mockResolvedValue(transaction());
+      renderPage();
+
+      const mark = await screen.findByTestId("unknown-mark");
+      expect(mark).toHaveTextContent("Can't remember");
+      await userEvent.click(within(mark).getByRole("button", { name: "Undo" }));
+      expect(transactionsApi.unmarkUnknown).toHaveBeenCalledWith(1000);
+
+      await userEvent.click(screen.getByLabelText("Only transactions I can't remember"));
+      expect(screen.getByTestId("location")).toHaveTextContent("?unknown=true");
+      await waitFor(() => expect(transactionsApi.list).toHaveBeenLastCalledWith({ unknown: "true", page: 1, per_page: 50 }));
+    });
+  });
 });
+

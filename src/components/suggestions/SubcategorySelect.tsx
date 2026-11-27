@@ -8,12 +8,22 @@ interface Props {
   label: string;
   disabled?: boolean;
   size?: "sm" | "lg";
+  /** adds a "+ New subcategory…" option; the callback creates one and selects it */
+  onCreateNew?: () => void;
 }
 
+const CREATE_NEW = "__create__";
+
 /** A subcategory picker grouped by category. */
-export default function SubcategorySelect({ categories, value, onChange, label, disabled, size }: Props) {
+export default function SubcategorySelect({ categories, value, onChange, label, disabled, size, onCreateNew }: Props) {
   return (
-    <Form.Select aria-label={label} size={size} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled}>
+    <Form.Select
+      aria-label={label}
+      size={size}
+      value={value}
+      onChange={(e) => (e.target.value === CREATE_NEW ? onCreateNew?.() : onChange(e.target.value))}
+      disabled={disabled}
+    >
       <option value="" disabled>
         Pick a subcategory
       </option>
@@ -26,6 +36,7 @@ export default function SubcategorySelect({ categories, value, onChange, label, 
           ))}
         </optgroup>
       ))}
+      {onCreateNew && <option value={CREATE_NEW}>+ New subcategory…</option>}
     </Form.Select>
   );
 }

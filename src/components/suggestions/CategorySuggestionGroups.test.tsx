@@ -91,4 +91,15 @@ describe("CategorySuggestionGroups", () => {
 
     expect(screen.getByText("No transaction suggestions to review.")).toBeInTheDocument();
   });
+
+  it("answers 'no idea' for a whole merchant", async () => {
+    const dontKnow = vi.fn().mockResolvedValue(undefined);
+    render(
+      <CategorySuggestionGroups suggestions={suggestions} categories={[]} showTotals acceptAll={vi.fn()} acceptMerchant={vi.fn()} acceptAs={vi.fn()} reject={vi.fn()} dontKnow={dontKnow} />
+    );
+
+    await userEvent.click(within(screen.getAllByTestId("merchant-group")[0]).getByRole("button", { name: "No idea" }));
+
+    expect(dontKnow).toHaveBeenCalledWith(suggestions.slice(0, 2));
+  });
 });

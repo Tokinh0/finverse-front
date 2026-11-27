@@ -2,12 +2,14 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Badge, Button, Container, Form, Modal, Table } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import { keywordsApi, subcategoriesApi } from "../api";
+import AmountRangeFields from "../components/AmountRangeFields";
 import { Loading } from "../components/LoadingState";
 import type { Keyword, KeywordHealth, KeywordHealthFlag, Subcategory } from "../types";
+import { amountInputValue, amountRangeLabel, parseAmountRange } from "../utils/amountRange";
 
-type FormState = { name: string; subcategory_id: string };
+type FormState = { name: string; subcategory_id: string; min_amount: string; max_amount: string };
 
-const EMPTY_FORM: FormState = { name: "", subcategory_id: "" };
+const EMPTY_FORM: FormState = { name: "", subcategory_id: "", min_amount: "", max_amount: "" };
 
 const errorMessage = (err: unknown, fallback: string) => (err instanceof Error ? err.message : fallback);
 
@@ -72,7 +74,16 @@ export default function KeywordsCrud() {
 
   const openDialog = (keyword: Keyword | null) => {
     setEditingKeyword(keyword);
-    setFormData(keyword ? { name: keyword.name, subcategory_id: String(keyword.subcategory_id) } : EMPTY_FORM);
+    setFormData(
+      keyword
+        ? {
+            name: keyword.name,
+            subcategory_id: String(keyword.subcategory_id),
+            min_amount: amountInputValue(keyword.min_amount),
+            max_amount: amountInputValue(keyword.max_amount),
+          }
+        : EMPTY_FORM
+    );
     setIsDialogOpen(true);
   };
 
@@ -102,7 +113,12 @@ export default function KeywordsCrud() {
       return;
     }
 
-    const params = { name: formData.name, subcategory_id: Number(formData.subcategory_id) };
+    const range = parseAmountRange(formData.min_amount, formData.max_amount);
+    if (typeof range === "string") {
+      alert(range);
+      return;
+    }
+    const params = { name: formData.name, subcategory_id: Number(formData.subcategory_id), ...range };
     setIsSubmitting(true);
     try {
       const saved = editingKeyword ? await keywordsApi.update(editingKeyword.id, params) : await keywordsApi.create(params);
@@ -183,6 +199,15 @@ export default function KeywordsCrud() {
                 ))}
               </Form.Select>
             </Form.Group>
+            <div className="mt-3">
+              <AmountRangeFields
+                idPrefix="keyword-amount"
+                min={formData.min_amount}
+                max={formData.max_amount}
+                onChange={(min, max) => setFormData({ ...formData, min_amount: min, max_amount: max })}
+                disabled={isSubmitting}
+              />
+            </div>
           </Modal.Body>
           <Modal.Footer>
             <Button variant="outline-secondary" onClick={closeDialog} disabled={isSubmitting}>
@@ -213,6 +238,7 @@ export default function KeywordsCrud() {
             <th>ID</th>
             <th>Name</th>
             <th>Subcategory</th>
+            <th>Amounts</th>
             <th>Health</th>
             <th className="text-end">Actions</th>
           </tr>
@@ -220,7 +246,7 @@ export default function KeywordsCrud() {
         <tbody>
           {visibleKeywords.length === 0 ? (
             <tr>
-              <td colSpan={5} className="text-center text-muted">
+              <td colSpan={6} className="text-center text-muted">
                 {needsAttention ? "Every rule looks healthy." : "No keywords found. Add one to get started."}
               </td>
             </tr>
@@ -230,6 +256,7 @@ export default function KeywordsCrud() {
                 <td className="fw-medium">{keyword.id}</td>
                 <td>{keyword.name}</td>
                 <td>{subcategoryName(keyword)}</td>
+                <td className="text-nowrap small">{amountRangeLabel(keyword.min_amount, keyword.max_amount) || <span className="text-muted">Any</span>}</td>
                 <td data-testid={`health-${keyword.id}`}>
                   <HealthCell health={health.get(keyword.id)} />
                 </td>

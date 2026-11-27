@@ -57,7 +57,7 @@ describe("RuleSuggestionCard", () => {
     await userEvent.selectOptions(screen.getByLabelText("Rule subcategory"), "10");
     await userEvent.click(screen.getByRole("button", { name: "Save & accept" }));
 
-    expect(onAccept).toHaveBeenCalledWith({ name: "UBER", subcategory_id: 10, reapply: "uncategorized" });
+    expect(onAccept).toHaveBeenCalledWith({ name: "UBER", subcategory_id: 10, min_amount: null, max_amount: null, reapply: "uncategorized" });
   });
 
   it("describes removals without re-apply options, and rejects", async () => {
@@ -69,5 +69,31 @@ describe("RuleSuggestionCard", () => {
     expect(screen.queryByText("Apply to:")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Reject" }));
     expect(onReject).toHaveBeenCalled();
+  });
+
+  it("shows an amount range and lets the owner change it before accepting", async () => {
+    const { onAccept } = renderCard(
+      ruleSuggestion({ proposed: { name: "AMAZON", subcategory: { id: 20, name: "Uber", category: "Transporte" }, min_amount: null, max_amount: 99.99 } })
+    );
+
+    expect(screen.getByTestId("rule-suggestion")).toHaveTextContent(/Descriptions containing AMAZON \(only up to R\$\s?99,99\) → Transporte \/ Uber/);
+    await userEvent.click(screen.getByRole("button", { name: "Edit & accept" }));
+    expect(screen.getByLabelText("Maximum amount")).toHaveValue("99,99");
+    await userEvent.clear(screen.getByLabelText("Maximum amount"));
+    await userEvent.type(screen.getByLabelText("Maximum amount"), "80");
+    await userEvent.click(screen.getByRole("button", { name: "Save & accept" }));
+
+    expect(onAccept).toHaveBeenCalledWith(expect.objectContaining({ min_amount: null, max_amount: 80 }));
+  });
+
+  it("refuses an invalid range", async () => {
+    const { onAccept } = renderCard();
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit & accept" }));
+    await userEvent.type(screen.getByLabelText("Minimum amount"), "abc");
+    await userEvent.click(screen.getByRole("button", { name: "Save & accept" }));
+
+    expect(screen.getByText("Amounts must be positive numbers, like 99,90.")).toBeInTheDocument();
+    expect(onAccept).not.toHaveBeenCalled();
   });
 });

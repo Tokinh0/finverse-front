@@ -86,6 +86,7 @@ export default function SuggestionsGuideModal({ show, onHide }: Props) {
               acceptMerchant={noop}
               acceptAs={noop}
               reject={noop}
+              dontKnow={noop}
             />
           </GuideFrame>
         )}

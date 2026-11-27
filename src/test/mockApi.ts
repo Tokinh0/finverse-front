@@ -10,7 +10,7 @@ export const mockApiModule = () => ({
   keywordsApi: { list: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn(), health: vi.fn(async () => []) },
   assetsApi: { dashboard: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn() },
   reportsApi: { monthlyByCategory: vi.fn(), monthlyBySubcategory: vi.fn(), financialHealth: vi.fn(), categorizationProgress: vi.fn() },
-  transactionsApi: { list: vi.fn(), recategorize: vi.fn() },
+  transactionsApi: { list: vi.fn(), recategorize: vi.fn(), markUnknown: vi.fn(), unmarkUnknown: vi.fn() },
   alertsApi: { list: vi.fn(), dismiss: vi.fn(), restore: vi.fn() },
   settingsApi: { claude: vi.fn(), updateClaude: vi.fn(), removeClaudeKey: vi.fn() },
   suggestionsApi: {
@@ -26,6 +26,7 @@ export const mockApiModule = () => ({
     categories: vi.fn(),
     acceptCategory: vi.fn(),
     rejectCategory: vi.fn(),
+    dontKnow: vi.fn(),
     bulkAccept: vi.fn(),
     rules: vi.fn(),
     acceptRule: vi.fn(),

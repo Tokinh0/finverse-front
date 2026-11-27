@@ -10,7 +10,9 @@ import { Badge, Button, Card, Form, Table } from "react-bootstrap";
 import type { Category, Reapply, RuleSuggestion, SubcategoryRef } from "../../types";
 import { formatIsoDate } from "../../utils/dates";
 import { formatCurrency } from "../../utils/formatter";
+import { amountInputValue, amountRangeLabel, parseAmountRange } from "../../utils/amountRange";
 import { ORIGIN_HELP, confidenceLabel, originLabel, RULE_TITLES } from "../../utils/suggestions";
+import AmountRangeFields from "../AmountRangeFields";
 import InfoTip from "./InfoTip";
 import SubcategorySelect from "./SubcategorySelect";
 
@@ -20,8 +22,10 @@ interface Props {
   guide?: boolean;
   categories: Category[];
   showTotals: boolean;
-  onAccept: (params: { name?: string; subcategory_id?: number; reapply: Reapply }) => Promise<void>;
+  onAccept: (params: { name?: string; subcategory_id?: number; min_amount?: number | null; max_amount?: number | null; reapply: Reapply }) => Promise<void>;
   onReject: () => Promise<void>;
+  /** opens the "new subcategory" dialog; `select` receives the created subcategory's id */
+  onNewSubcategory?: (select: (subcategoryId: number) => void) => void;
 }
 
 const HIDDEN = "R$ •••";
@@ -34,6 +38,12 @@ const ACTION_ICONS: Record<RuleSuggestion["action"], ReactNode> = {
 
 const subLabel = (sub: SubcategoryRef | null | undefined) => (sub ? `${sub.category} / ${sub.name}` : "—");
 
+/** " (only up to R$ 99,99)" or "" */
+const rangeSuffix = (rule: { min_amount?: number | null; max_amount?: number | null } | null | undefined) => {
+  const label = amountRangeLabel(rule?.min_amount, rule?.max_amount);
+  return label ? ` (only ${label})` : "";
+};
+
 const REAPPLY_OPTIONS: [Reapply, string][] = [
   ["uncategorized", "Uncategorized transactions"],
   ["all", "Also transactions other rules matched"],
@@ -41,11 +51,14 @@ const REAPPLY_OPTIONS: [Reapply, string][] = [
 ];
 
 /** One proposed rule change: the rule, why, how sure, and exactly what it would move. */
-export default function RuleSuggestionCard({ suggestion, guide = false, categories, showTotals, onAccept, onReject }: Props) {
+export default function RuleSuggestionCard({ suggestion, guide = false, categories, showTotals, onAccept, onReject, onNewSubcategory }: Props) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(suggestion.proposed?.name ?? "");
   const [subcategoryId, setSubcategoryId] = useState(String(suggestion.proposed?.subcategory?.id ?? ""));
   const [reapply, setReapply] = useState<Reapply>(suggestion.action === "delete" ? "none" : "uncategorized");
+  const [minAmount, setMinAmount] = useState(amountInputValue(suggestion.proposed?.min_amount));
+  const [maxAmount, setMaxAmount] = useState(amountInputValue(suggestion.proposed?.max_amount));
+  const [rangeError, setRangeError] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [busy, setBusy] = useState(false);
   const preview = suggestion.preview;
@@ -60,14 +73,22 @@ export default function RuleSuggestionCard({ suggestion, guide = false, categori
     }
   };
 
-  const accept = () =>
-    run(() =>
+  const accept = () => {
+    const range = editing && suggestion.action !== "delete" ? parseAmountRange(minAmount, maxAmount) : null;
+    if (typeof range === "string") {
+      setRangeError(range);
+      return;
+    }
+    setRangeError(null);
+    return run(() =>
       onAccept({
         ...(editing && name.trim() ? { name: name.trim() } : {}),
         ...(editing && subcategoryId ? { subcategory_id: Number(subcategoryId) } : {}),
+        ...(range ?? {}),
         reapply,
       })
     );
+  };
 
   const moveCount = reapply === "all" ? preview?.total ?? 0 : reapply === "uncategorized" ? preview?.counts.uncategorized ?? 0 : 0;
 
@@ -82,13 +103,15 @@ export default function RuleSuggestionCard({ suggestion, guide = false, categori
             </Badge>
             {suggestion.action === "create" && (
               <span>
-                Descriptions containing <code>{suggestion.proposed?.name}</code> → <strong>{subLabel(suggestion.proposed?.subcategory)}</strong>
+                Descriptions containing <code>{suggestion.proposed?.name}</code>
+                {rangeSuffix(suggestion.proposed)} → <strong>{subLabel(suggestion.proposed?.subcategory)}</strong>
               </span>
             )}
             {suggestion.action === "update" && (
               <span>
-                <code>{suggestion.keyword?.name}</code> ({subLabel(suggestion.keyword?.subcategory)}) → <code>{suggestion.proposed?.name}</code>{" "}
-                (<strong>{subLabel(suggestion.proposed?.subcategory)}</strong>)
+                <code>{suggestion.keyword?.name}</code>
+                {rangeSuffix(suggestion.keyword)} ({subLabel(suggestion.keyword?.subcategory)}) → <code>{suggestion.proposed?.name}</code>
+                {rangeSuffix(suggestion.proposed)} (<strong>{subLabel(suggestion.proposed?.subcategory)}</strong>)
               </span>
             )}
             {suggestion.action === "delete" && (
@@ -172,9 +195,31 @@ export default function RuleSuggestionCard({ suggestion, guide = false, categori
               disabled={busy}
             />
             <div style={{ minWidth: 240 }}>
-              <SubcategorySelect categories={categories} value={subcategoryId} onChange={setSubcategoryId} label="Rule subcategory" size="sm" disabled={busy} />
+              <SubcategorySelect
+                categories={categories}
+                value={subcategoryId}
+                onChange={setSubcategoryId}
+                label="Rule subcategory"
+                size="sm"
+                disabled={busy}
+                onCreateNew={onNewSubcategory && (() => onNewSubcategory((id) => setSubcategoryId(String(id))))}
+              />
             </div>
             <span className="small text-muted align-self-center">The preview updates after saving.</span>
+            <div className="w-100">
+              <AmountRangeFields
+                idPrefix={`rule-${suggestion.id}-amount`}
+                size="sm"
+                min={minAmount}
+                max={maxAmount}
+                onChange={(min, max) => {
+                  setMinAmount(min);
+                  setMaxAmount(max);
+                }}
+                disabled={busy}
+              />
+              {rangeError && <div className="text-danger small">{rangeError}</div>}
+            </div>
           </div>
         )}
 

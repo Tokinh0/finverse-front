@@ -2,6 +2,8 @@ import { FormEvent, useEffect, useState } from "react";
 import { Alert, Button, Form, Modal } from "react-bootstrap";
 import { ApiError, transactionsApi } from "../../api";
 import type { Category, RecategorizeResult, Transaction, TransactionType } from "../../types";
+import { parseAmountRange } from "../../utils/amountRange";
+import AmountRangeFields from "../AmountRangeFields";
 import { formatIsoDate } from "../../utils/dates";
 
 interface Props {
@@ -12,6 +14,8 @@ interface Props {
   showTotals: boolean;
   onHide: () => void;
   onSaved: (result: RecategorizeResult) => void;
+  /** offers "No idea" for uncategorized transactions; called after marking it */
+  onMarkedUnknown?: () => void;
 }
 
 /** matches the API's limit on a correction note */
@@ -28,13 +32,23 @@ const errorText = (err: unknown) => {
   return errors?.join(", ") || "Could not save the change.";
 };
 
-export default function RecategorizeModal({ transaction, initialSubcategoryId, categories, showTotals, onHide, onSaved }: Props) {
+export default function RecategorizeModal({
+  transaction,
+  initialSubcategoryId,
+  categories,
+  showTotals,
+  onHide,
+  onSaved,
+  onMarkedUnknown,
+}: Props) {
   const [subcategoryId, setSubcategoryId] = useState("");
   const [transactionType, setTransactionType] = useState<TransactionType>("debit");
   const [createKeyword, setCreateKeyword] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [applyToMatching, setApplyToMatching] = useState(true);
   const [reason, setReason] = useState("");
+  const [minAmount, setMinAmount] = useState("");
+  const [maxAmount, setMaxAmount] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,13 +60,35 @@ export default function RecategorizeModal({ transaction, initialSubcategoryId, c
     setKeyword(transaction.name.trim());
     setApplyToMatching(true);
     setReason("");
+    setMinAmount("");
+    setMaxAmount("");
     setError(null);
   }, [transaction, initialSubcategoryId]);
 
   if (!transaction) return null;
 
+  const canMarkUnknown = onMarkedUnknown && transaction.categorization_source === "uncategorized" && !transaction.unknown_marked;
+
+  const markUnknown = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      await transactionsApi.markUnknown(transaction.id);
+      onMarkedUnknown?.();
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    const range = createKeyword ? parseAmountRange(minAmount, maxAmount) : null;
+    if (typeof range === "string") {
+      setError(range);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -60,6 +96,7 @@ export default function RecategorizeModal({ transaction, initialSubcategoryId, c
         subcategory_id: Number(subcategoryId),
         transaction_type: transactionType,
         ...(createKeyword && keyword.trim() ? { keyword: keyword.trim(), apply_to_matching: applyToMatching } : {}),
+        ...(createKeyword && range && (range.min_amount !== null || range.max_amount !== null) ? range : {}),
         ...(reason.trim() ? { reason: reason.trim() } : {}),
       });
       onSaved(result);
@@ -145,6 +182,17 @@ export default function RecategorizeModal({ transaction, initialSubcategoryId, c
                 <Form.Label className="small mb-1">Keyword (text the transaction name contains)</Form.Label>
                 <Form.Control value={keyword} onChange={(e) => setKeyword(e.target.value)} required disabled={saving} />
               </Form.Group>
+              <AmountRangeFields
+                idPrefix="recategorize-amount"
+                size="sm"
+                min={minAmount}
+                max={maxAmount}
+                onChange={(min, max) => {
+                  setMinAmount(min);
+                  setMaxAmount(max);
+                }}
+                disabled={saving}
+              />
               <Form.Check
                 id="recategorize-apply"
                 type="checkbox"
@@ -157,6 +205,17 @@ export default function RecategorizeModal({ transaction, initialSubcategoryId, c
           )}
         </Modal.Body>
         <Modal.Footer>
+          {canMarkUnknown && (
+            <Button
+              variant="link"
+              className="me-auto text-secondary"
+              onClick={markUnknown}
+              disabled={saving}
+              title={'Keeps it in Outros with a "can\'t remember" mark and stops suggestions for it'}
+            >
+              🤷 No idea what this is
+            </Button>
+          )}
           <Button variant="outline-secondary" onClick={onHide} disabled={saving}>
             Cancel
           </Button>

@@ -1,18 +1,12 @@
 import { useEffect, useState } from "react";
 import { categoriesApi, subcategoriesApi } from "../api";
 import type { Category, Subcategory } from "../types";
+import { SUBCATEGORY_TYPES } from "../utils/categories";
 
 // Rows added in the UI get a negative temporary id until the API returns the real one.
 let nextTempId = -1;
 const isNew = (record: { id: number }) => record.id < 0;
 
-const SUBCATEGORY_TYPES = [
-  ["gain", "Gain"],
-  ["expense", "Expense"],
-  ["investment", "Investment"],
-  ["transfer", "Transfer"],
-  ["other", "Other"],
-] as const;
 
 export default function CategorySubcategoryManager() {
   const [categories, setCategories] = useState<Category[]>([]);

@@ -1,6 +1,7 @@
 import AutoAwesomeOutlined from "@mui/icons-material/AutoAwesomeOutlined";
 import DoneAllOutlined from "@mui/icons-material/DoneAllOutlined";
 import HistoryOutlined from "@mui/icons-material/HistoryOutlined";
+import QuestionMarkOutlined from "@mui/icons-material/QuestionMarkOutlined";
 import StorefrontOutlined from "@mui/icons-material/StorefrontOutlined";
 import { useMemo, useState } from "react";
 import { Badge, Button, Card, Form } from "react-bootstrap";
@@ -19,6 +20,10 @@ interface Props {
   acceptMerchant: (merchantKey: string) => Promise<void>;
   acceptAs: (suggestions: CategorySuggestion[], subcategoryId: number) => Promise<void>;
   reject: (suggestions: CategorySuggestion[]) => Promise<void>;
+  /** "no idea": keep them in Outros, mark them, stop suggesting (not a rejection) */
+  dontKnow?: (suggestions: CategorySuggestion[]) => Promise<void>;
+  /** opens the "new subcategory" dialog; `select` receives the created subcategory's id */
+  onNewSubcategory?: (select: (subcategoryId: number) => void) => void;
 }
 
 const THRESHOLDS = [0.95, 0.9, 0.8, 0.7];
@@ -27,7 +32,17 @@ const HIDDEN = "R$ •••";
 const MAX_LISTED = 6;
 
 /** Pending category suggestions, one card per merchant, with bulk actions on top. */
-export default function CategorySuggestionGroups({ suggestions, categories, showTotals, acceptAll, acceptMerchant, acceptAs, reject }: Props) {
+export default function CategorySuggestionGroups({
+  suggestions,
+  categories,
+  showTotals,
+  acceptAll,
+  acceptMerchant,
+  acceptAs,
+  reject,
+  dontKnow,
+  onNewSubcategory,
+}: Props) {
   const [threshold, setThreshold] = useState(0.9);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [changing, setChanging] = useState<string | null>(null);
@@ -161,7 +176,15 @@ export default function CategorySuggestionGroups({ suggestions, categories, show
               {changing === key ? (
                 <div className="d-flex flex-wrap gap-2 mt-2">
                   <div style={{ minWidth: 240 }}>
-                    <SubcategorySelect categories={categories} value={changeTo} onChange={setChangeTo} label="Move to" size="sm" disabled={busy} />
+                    <SubcategorySelect
+                      categories={categories}
+                      value={changeTo}
+                      onChange={setChangeTo}
+                      label="Move to"
+                      size="sm"
+                      disabled={busy}
+                      onCreateNew={onNewSubcategory && (() => onNewSubcategory((id) => setChangeTo(String(id))))}
+                    />
                   </div>
                   <Button size="sm" variant="dark" disabled={!changeTo || busy} onClick={() => run(key, () => acceptAs(group.suggestions, Number(changeTo)))}>
                     Move {group.suggestions.length}
@@ -189,6 +212,18 @@ export default function CategorySuggestionGroups({ suggestions, categories, show
                   <Button size="sm" variant="outline-danger" disabled={busy} onClick={() => run(key, () => reject(group.suggestions))}>
                     Reject
                   </Button>
+                  {dontKnow && (
+                    <>
+                      <Button size="sm" variant="outline-secondary" disabled={busy} onClick={() => run(key, () => dontKnow(group.suggestions))}>
+                        <QuestionMarkOutlined sx={{ fontSize: 14 }} className="me-1" aria-hidden />
+                        No idea
+                      </Button>
+                      <InfoTip label="no idea">
+                        For transactions you can't remember. They stay in Outros, get a "Can't remember" mark and no more suggestions.
+                        This isn't a rejection, so it doesn't affect future suggestions for this merchant.
+                      </InfoTip>
+                    </>
+                  )}
                 </div>
               )}
             </Card.Body>

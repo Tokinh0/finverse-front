@@ -1,4 +1,5 @@
 import InsightsOutlined from "@mui/icons-material/InsightsOutlined";
+import CreateNewFolderOutlined from "@mui/icons-material/CreateNewFolderOutlined";
 import MenuBookOutlined from "@mui/icons-material/MenuBookOutlined";
 import ReceiptLongOutlined from "@mui/icons-material/ReceiptLongOutlined";
 import RuleOutlined from "@mui/icons-material/RuleOutlined";
@@ -12,6 +13,7 @@ import CategorizationProgressChart from "../components/suggestions/Categorizatio
 import CategorySuggestionGroups from "../components/suggestions/CategorySuggestionGroups";
 import RuleSuggestionCard from "../components/suggestions/RuleSuggestionCard";
 import RunStatus from "../components/suggestions/RunStatus";
+import NewSubcategoryModal from "../components/suggestions/NewSubcategoryModal";
 import SectionTitle from "../components/suggestions/SectionTitle";
 import SuggestionsGuideModal from "../components/suggestions/SuggestionsGuideModal";
 import { isRunActive, useSuggestionsSummary } from "../hooks/suggestionsSummary";
@@ -41,6 +43,8 @@ export default function Suggestions({ showTotals }: Props) {
   const [notice, setNotice] = useState<{ variant: "success" | "danger"; text: string } | null>(null);
   const [starting, setStarting] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  // Open while creating a subcategory; `select` (when set) puts the new one in the picker that asked.
+  const [creating, setCreating] = useState<{ select?: (subcategoryId: number) => void } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -59,10 +63,14 @@ export default function Suggestions({ showTotals }: Props) {
     }
   }, []);
 
+  const loadCategories = useCallback(() => categoriesApi.list().then(setCategories).catch((err) => console.error(err)), []);
+
   useEffect(() => {
     load();
-    categoriesApi.list().then(setCategories).catch((err) => console.error(err));
-  }, [load]);
+    loadCategories();
+  }, [load, loadCategories]);
+
+  const requestNewSubcategory = (select: (subcategoryId: number) => void) => setCreating({ select });
 
   // Reload when a background run finishes.
   const active = isRunActive(summary);
@@ -102,10 +110,16 @@ export default function Suggestions({ showTotals }: Props) {
     <Container className="mt-4 text-start">
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
         <h2 className="mb-0">Suggestions</h2>
-        <Button variant="outline-secondary" size="sm" onClick={() => setShowGuide(true)}>
-          <MenuBookOutlined fontSize="small" className="me-1" aria-hidden />
-          How this page works
-        </Button>
+        <div className="d-flex flex-wrap gap-2">
+          <Button variant="outline-secondary" size="sm" onClick={() => setCreating({})}>
+            <CreateNewFolderOutlined fontSize="small" className="me-1" aria-hidden />
+            New category / subcategory
+          </Button>
+          <Button variant="outline-secondary" size="sm" onClick={() => setShowGuide(true)}>
+            <MenuBookOutlined fontSize="small" className="me-1" aria-hidden />
+            How this page works
+          </Button>
+        </div>
       </div>
 
       {progress.some((m) => m.total > 0) && (
@@ -162,6 +176,7 @@ export default function Suggestions({ showTotals }: Props) {
                 suggestion={suggestion}
                 categories={categories}
                 showTotals={showTotals}
+                onNewSubcategory={requestNewSubcategory}
                 onAccept={(params: { name?: string; subcategory_id?: number; reapply: Reapply }) =>
                   act(
                     () => suggestionsApi.acceptRule(suggestion.id, params),
@@ -181,6 +196,7 @@ export default function Suggestions({ showTotals }: Props) {
           suggestions={categorySuggestions}
           categories={categories}
           showTotals={showTotals}
+          onNewSubcategory={requestNewSubcategory}
           acceptAll={(minConfidence) =>
             act(
               () => suggestionsApi.bulkAccept({ min_confidence: minConfidence }),
@@ -199,6 +215,12 @@ export default function Suggestions({ showTotals }: Props) {
               () => `${plural(group.length, "transaction")} moved.`
             )
           }
+          dontKnow={(group) =>
+            act(
+              () => Promise.all(group.map((s) => suggestionsApi.dontKnow(s.id))),
+              () => `Marked ${plural(group.length, "transaction")} as "can't remember". They stay in Outros.`
+            )
+          }
           reject={(group) =>
             act(
               () => Promise.all(group.map((s) => suggestionsApi.rejectCategory(s.id))),
@@ -208,6 +230,17 @@ export default function Suggestions({ showTotals }: Props) {
         />
       )}
       <SuggestionsGuideModal show={showGuide} onHide={() => setShowGuide(false)} />
+      <NewSubcategoryModal
+        show={creating !== null}
+        categories={categories}
+        onHide={() => setCreating(null)}
+        onCreated={async (subcategory) => {
+          await loadCategories();
+          creating?.select?.(subcategory.id);
+          setCreating(null);
+          setNotice({ variant: "success", text: `Subcategory "${subcategory.name}" created.` });
+        }}
+      />
     </Container>
   );
 }

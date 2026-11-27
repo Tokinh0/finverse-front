@@ -25,4 +25,13 @@ describe("SuggestionChip", () => {
 
     screen.getAllByRole("button").forEach((button) => expect(button).toBeDisabled());
   });
+
+  it("offers 'no idea' when asked to", async () => {
+    const onDontKnow = vi.fn();
+    render(<SuggestionChip suggestion={categorySuggestion()} onAccept={vi.fn()} onChange={vi.fn()} onReject={vi.fn()} onDontKnow={onDontKnow} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "No idea what this is" }));
+
+    expect(onDontKnow).toHaveBeenCalled();
+  });
 });

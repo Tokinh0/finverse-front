@@ -28,6 +28,9 @@ export interface Keyword {
   description?: string | null;
   color_code?: string | null;
   keyword_type?: string | null;
+  /** optional amount range (BRL, inclusive); the rule only applies inside it */
+  min_amount?: number | null;
+  max_amount?: number | null;
   subcategory?: Subcategory | null;
 }
 
@@ -120,6 +123,8 @@ export interface Transaction {
   category: { id: number; name: string; color_code?: string | null } | null;
   categorization_source?: CategorizationSource;
   keyword_id?: number | null;
+  /** the owner said "no idea": stays in Outros, gets no more suggestions */
+  unknown_marked?: boolean;
   pending_suggestion?: CategorySuggestion | null;
 }
 
@@ -141,6 +146,8 @@ export interface TransactionFilters {
   subcategory_id?: string;
   transaction_type?: string;
   q?: string;
+  /** "true": only transactions marked "no idea" */
+  unknown?: string;
   page?: number;
   per_page?: number;
 }
@@ -154,6 +161,9 @@ export interface RecategorizeParams {
   apply_to_matching?: boolean;
   /** why the owner made this change; Claude reads it when suggesting for similar transactions */
   reason?: string;
+  /** amount range for the new keyword (null = no bound) */
+  min_amount?: number | null;
+  max_amount?: number | null;
 }
 
 export interface RecategorizeResult {
@@ -249,7 +259,8 @@ export interface FinancialHealthReport {
 }
 
 // Categorization suggestions (see finverse/app/presenters/*suggestion*_presenter.rb)
-export type SuggestionStatus = "pending" | "accepted" | "rejected" | "superseded";
+/** "dismissed": the owner answered "no idea" (not a rejection of the subcategory) */
+export type SuggestionStatus = "pending" | "accepted" | "rejected" | "dismissed" | "superseded";
 
 export interface CategorySuggestion {
   id: number;
@@ -334,9 +345,9 @@ export interface RuleSuggestion {
   confidence: number;
   reason: string | null;
   /** the existing rule (update/delete) */
-  keyword: { id: number; name: string; subcategory: SubcategoryRef | null } | null;
+  keyword: { id: number; name: string; subcategory: SubcategoryRef | null; min_amount?: number | null; max_amount?: number | null } | null;
   /** the rule after the change (create/update) */
-  proposed: { name: string; subcategory: SubcategoryRef | null } | null;
+  proposed: { name: string; subcategory: SubcategoryRef | null; min_amount?: number | null; max_amount?: number | null } | null;
   /** only while pending */
   preview: RulePreview | null;
   created_at: string;

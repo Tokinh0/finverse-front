@@ -16,7 +16,7 @@ interface Props {
 }
 
 const PER_PAGE = 50;
-const FILTER_KEYS = ["month", "category_id", "subcategory_id", "transaction_type", "q"] as const;
+const FILTER_KEYS = ["month", "category_id", "subcategory_id", "transaction_type", "q", "unknown"] as const;
 const HIDDEN = "R$ •••";
 const BULK_CONFIDENCE = 0.9;
 
@@ -188,6 +188,15 @@ export default function Transactions({ showTotals }: Props) {
           <Col xs={12} md={3}>
             <Form.Control aria-label="Search" type="search" placeholder="Search name..." value={searchText} onChange={(e) => setSearchText(e.target.value)} />
           </Col>
+          <Col xs={12}>
+            <Form.Check
+              type="switch"
+              id="filter-unknown"
+              label="Only transactions I can't remember"
+              checked={filters.unknown === "true"}
+              onChange={(e) => updateFilters({ unknown: e.target.checked ? "true" : "" })}
+            />
+          </Col>
         </Row>
       </Form>
 
@@ -274,7 +283,30 @@ export default function Transactions({ showTotals }: Props) {
                             onReject={() =>
                               decide(t.id, () => suggestionsApi.rejectCategory(t.pending_suggestion!.id), "Suggestion rejected.")
                             }
+                            onDontKnow={() =>
+                              decide(
+                                t.id,
+                                () => suggestionsApi.dontKnow(t.pending_suggestion!.id),
+                                "Marked as \"can't remember\". It stays in Outros and gets no more suggestions."
+                              )
+                            }
                           />
+                        )}
+                        {t.unknown_marked && (
+                          <div className="d-flex align-items-center gap-1 mt-1" data-testid="unknown-mark">
+                            <Badge bg="light" text="dark" className="border" title="You said you can't remember this one. It stays in Outros and gets no suggestions.">
+                              🤷 Can't remember
+                            </Badge>
+                            <Button
+                              size="sm"
+                              variant="link"
+                              className="p-0 small"
+                              disabled={busyId !== null}
+                              onClick={() => decide(t.id, () => transactionsApi.unmarkUnknown(t.id), "Mark removed. It can get suggestions again.")}
+                            >
+                              Undo
+                            </Button>
+                          </div>
                         )}
                       </td>
                       <td>
@@ -321,6 +353,12 @@ export default function Transactions({ showTotals }: Props) {
         showTotals={showTotals}
         onHide={() => setEditing(null)}
         onSaved={handleSaved}
+        onMarkedUnknown={() => {
+          setEditing(null);
+          setNotice("Marked as \"can't remember\". It stays in Outros and gets no more suggestions.");
+          load();
+          refreshSummary();
+        }}
       />
     </Container>
   );

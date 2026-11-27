@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { categoriesApi, reportsApi, suggestionsApi } from "../api";
+import { categoriesApi, reportsApi, subcategoriesApi, suggestionsApi } from "../api";
 import { SuggestionsSummaryContext } from "../hooks/suggestionsSummary";
 import { category, categorySuggestion, progressMonth, ruleSuggestion, subcategory, suggestionsSummary } from "../test/fixtures";
 import Suggestions from "./Suggestions";
@@ -92,4 +92,39 @@ describe("Suggestions", () => {
 
     expect(screen.getByRole("dialog", { name: "How the Suggestions page works" })).toBeInTheDocument();
   });
+
+  it("creates a subcategory from a picker and selects it there", async () => {
+    vi.mocked(subcategoriesApi.create).mockResolvedValue(subcategory({ id: 21, name: "Táxi" }));
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: "Edit & accept" }));
+
+    vi.mocked(categoriesApi.list).mockResolvedValue([
+      category({ subcategories: [subcategory({ id: 20, name: "Uber" }), subcategory({ id: 21, name: "Táxi" })] }),
+    ]);
+    await userEvent.selectOptions(screen.getByLabelText("Rule subcategory"), "+ New subcategory…");
+    await userEvent.type(screen.getByLabelText("Subcategory name"), "Táxi");
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    expect(await screen.findByText('Subcategory "Táxi" created.')).toBeInTheDocument();
+    expect(screen.getByLabelText("Rule subcategory")).toHaveValue("21");
+  });
+
+  it("creates a category or subcategory from the header", async () => {
+    renderPage();
+
+    await userEvent.click(await screen.findByRole("button", { name: "New category / subcategory" }));
+
+    expect(screen.getByRole("dialog", { name: "New subcategory" })).toBeInTheDocument();
+  });
+
+  it("answers 'no idea' for a merchant", async () => {
+    vi.mocked(suggestionsApi.dontKnow).mockResolvedValue(categorySuggestion({ status: "dismissed" }));
+    renderPage("/suggestions?tab=transactions");
+
+    await userEvent.click(within(await screen.findByTestId("merchant-group")).getByRole("button", { name: "No idea" }));
+
+    expect(suggestionsApi.dontKnow).toHaveBeenCalledWith(500);
+    expect(await screen.findByText(/Marked 1 transaction as "can't remember"/)).toBeInTheDocument();
+  });
 });
+
