@@ -5,8 +5,9 @@ import { MESSAGES, initialLocale, isLocale, rememberLocale, setCurrentLocale, ty
 
 /**
  * Owns the app's language. Starts with the last language used in this browser (so the page
- * doesn't flash in the wrong one), then follows the one saved in Settings on the API, which
- * also decides the language of the API's messages and of the reasons Claude writes.
+ * doesn't flash in the wrong one), then follows the signed-in profile's language
+ * (ProfileProvider calls showLocale), which also decides the language of the API's messages and
+ * of the reasons Claude writes. setLocale saves a change for the profile.
  */
 export default function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(initialLocale);
@@ -21,13 +22,7 @@ export default function I18nProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.lang = locale;
-    settingsApi
-      .preferences()
-      .then((prefs) => {
-        if (isLocale(prefs?.locale)) apply(prefs.locale);
-      })
-      .catch((err) => console.error(err));
-    // Only on mount: afterwards the owner changes it through setLocale.
+    // Only on mount: afterwards apply keeps it in step.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -39,6 +34,9 @@ export default function I18nProvider({ children }: { children: ReactNode }) {
     [apply]
   );
 
-  const value = useMemo(() => ({ locale, t: MESSAGES[locale], setLocale }), [locale, setLocale]);
+  const value = useMemo(
+    () => ({ locale, t: MESSAGES[locale], setLocale, showLocale: apply }),
+    [locale, setLocale, apply]
+  );
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }

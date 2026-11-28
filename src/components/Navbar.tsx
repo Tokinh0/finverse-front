@@ -1,7 +1,9 @@
 import { Badge, Container, Form, Nav, Navbar, NavDropdown } from "react-bootstrap";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { isRunActive, useSuggestionsSummary } from "../hooks/suggestionsSummary";
 import { useI18n } from "../i18n/context";
+import { useProfile } from "../profile/context";
+import ProfileAvatar from "./profiles/ProfileAvatar";
 
 interface Props {
   showTotals: boolean;
@@ -9,7 +11,7 @@ interface Props {
 }
 
 const LINKS = [
-  { to: "/", key: "dashboard" },
+  { to: "/painel", key: "dashboard" },
   { to: "/statements", key: "statements" },
   { to: "/transactions", key: "transactions" },
   { to: "/alerts", key: "reviewCharges" },
@@ -20,12 +22,14 @@ const LINKS = [
 export default function AppNavbar({ showTotals, setShowTotals }: Props) {
   const { summary } = useSuggestionsSummary();
   const { t } = useI18n();
+  const { profile, signOut } = useProfile();
+  const navigate = useNavigate();
   const pending = summary?.pending_count ?? 0;
 
   return (
     <Navbar bg="dark" variant="dark" expand="md" className="mb-4" fixed="top">
       <Container>
-        <Navbar.Brand as={Link} to="/">
+        <Navbar.Brand as={Link} to="/painel">
           Finverse
         </Navbar.Brand>
         <Navbar.Toggle aria-controls="main-navbar-nav" />
@@ -66,6 +70,33 @@ export default function AppNavbar({ showTotals, setShowTotals }: Props) {
             <Nav.Link as={NavLink} to="/settings" end aria-label={t.nav.settings} title={t.nav.settings}>
               ⚙
             </Nav.Link>
+            {profile && (
+              <NavDropdown
+                align="end"
+                id="profile-dropdown"
+                title={
+                  <span className="d-inline-flex align-items-center gap-2">
+                    <ProfileAvatar profile={profile} size={24} />
+                    <span aria-hidden="true">{profile.name}</span>
+                    <span className="visually-hidden">{t.nav.profileMenu(profile.name)}</span>
+                  </span>
+                }
+              >
+                <NavDropdown.Item as={Link} to="/settings">
+                  {t.nav.profileSettings}
+                </NavDropdown.Item>
+                <NavDropdown.Divider />
+                <NavDropdown.Item
+                  as="button"
+                  onClick={async () => {
+                    await signOut();
+                    navigate("/", { replace: true });
+                  }}
+                >
+                  {t.nav.switchProfile}
+                </NavDropdown.Item>
+              </NavDropdown>
+            )}
           </Nav>
           <Form className="d-flex ms-2 align-items-center">
             <Form.Check

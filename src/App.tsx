@@ -1,4 +1,5 @@
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
+import { Loading } from "./components/LoadingState";
 import AppNavbar from "./components/Navbar";
 import { SuggestionsSummaryContext, useSuggestionsSummaryState } from "./hooks/suggestionsSummary";
 import { usePersistentToggle } from "./hooks/usePersistentToggle";
@@ -8,6 +9,7 @@ import CategorySubcategoryManager from "./pages/CategorySubcategoryManager";
 import Dashboard from "./pages/Dashboard";
 import KeywordsCrud from "./pages/KeywordsCrud";
 import PortfolioDashboard from "./pages/PortfolioDashboard";
+import ProfilePicker from "./pages/ProfilePicker";
 import Settings from "./pages/Settings";
 import Statements from "./pages/Statements";
 import Suggestions from "./pages/Suggestions";
@@ -15,11 +17,15 @@ import Transactions from "./pages/Transactions";
 import FinancialHealth from "./pages/reports/FinancialHealth";
 import MonthlyByCategory from "./pages/reports/MonthlyByCategory";
 import MonthlyBySubcategory from "./pages/reports/MonthlyBySubcategory";
+import ProfileProvider from "./profile/ProfileProvider";
+import { useProfile } from "./profile/context";
 
 export default function App() {
   return (
     <I18nProvider>
-      <AppRoutes />
+      <ProfileProvider>
+        <AppRoutes />
+      </ProfileProvider>
     </I18nProvider>
   );
 }
@@ -28,15 +34,16 @@ function AppRoutes() {
   // Global privacy toggle: when false, amounts are hidden. Saved in the browser, and changed
   // only by the switch in the navbar.
   const [showTotals, setShowTotals] = usePersistentToggle("finverse.showTotals", false);
-  const suggestions = useSuggestionsSummaryState();
+  const { status } = useProfile();
+
+  if (status === "loading") return <Loading />;
 
   return (
-    <SuggestionsSummaryContext.Provider value={suggestions}>
-      <AppNavbar showTotals={showTotals} setShowTotals={setShowTotals} />
-      <br />
-      <br />
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
+    <Routes>
+      {/* Home: the profile picker, or straight to the dashboard when already signed in. */}
+      <Route path="/" element={status === "signedIn" ? <Navigate to="/painel" replace /> : <ProfilePicker />} />
+      <Route element={<SignedInLayout showTotals={showTotals} setShowTotals={setShowTotals} />}>
+        <Route path="/painel" element={<Dashboard />} />
         <Route path="/statements" element={<Statements />} />
         <Route path="/transactions" element={<Transactions showTotals={showTotals} />} />
         <Route path="/alerts" element={<ChargeAlerts showTotals={showTotals} />} />
@@ -48,7 +55,36 @@ function AppRoutes() {
         <Route path="/assets" element={<PortfolioDashboard showTotals={showTotals} />} />
         <Route path="/suggestions" element={<Suggestions showTotals={showTotals} />} />
         <Route path="/settings" element={<Settings />} />
-      </Routes>
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+/**
+ * Every page but the picker needs a signed-in profile; without one it sends the visitor to the
+ * picker and comes back after. Keyed by profile, so switching profiles starts every page (and
+ * the suggestions summary) fresh.
+ */
+function SignedInLayout(props: { showTotals: boolean; setShowTotals: (value: boolean) => void }) {
+  const { status, profile } = useProfile();
+  const location = useLocation();
+
+  if (status !== "signedIn" || !profile) {
+    return <Navigate to="/" replace state={{ from: `${location.pathname}${location.search}` }} />;
+  }
+  return <ProfileArea key={profile.id} {...props} />;
+}
+
+function ProfileArea({ showTotals, setShowTotals }: { showTotals: boolean; setShowTotals: (value: boolean) => void }) {
+  const suggestions = useSuggestionsSummaryState();
+
+  return (
+    <SuggestionsSummaryContext.Provider value={suggestions}>
+      <AppNavbar showTotals={showTotals} setShowTotals={setShowTotals} />
+      <br />
+      <br />
+      <Outlet />
     </SuggestionsSummaryContext.Provider>
   );
 }

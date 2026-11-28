@@ -390,3 +390,11 @@ export interface ClaudeSettings {
   warning?: string | null;
 }
 
+/** A person using the account (ProfilePresenter). */
+export interface Profile {
+  id: number;
+  name: string;
+  color_code: string | null;
+  locale: string;
+  password_protected: boolean;
+}

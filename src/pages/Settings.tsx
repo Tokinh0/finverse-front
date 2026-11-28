@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Alert, Button, Card, Container, Form } from "react-bootstrap";
 import { ApiError, settingsApi } from "../api";
 import { ErrorMessage, Loading } from "../components/LoadingState";
+import ProfileSettingsCard from "../components/profiles/ProfileSettingsCard";
 import { useSuggestionsSummary } from "../hooks/suggestionsSummary";
 import { useI18n } from "../i18n/context";
 import { LOCALES, isLocale, messages } from "../i18n/locale";
@@ -12,7 +13,7 @@ const MODELS = ["claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5"];
 const errorText = (err: unknown, fallback: string) =>
   (err instanceof ApiError ? (err.body as { errors?: string[] } | undefined)?.errors?.join(", ") : undefined) || fallback;
 
-/** The app's language: saved on the API, so its messages and Claude's reasons follow it too. */
+/** The profile's language: saved on the API, so its messages and Claude's reasons follow it too. */
 function LanguageCard() {
   const { t, locale, setLocale } = useI18n();
   const l = t.settings.language;
@@ -124,6 +125,7 @@ export default function Settings() {
     <Container className="mt-4 text-start" style={{ maxWidth: 760 }}>
       <h2 className="mb-3">{st.title}</h2>
 
+      <ProfileSettingsCard />
       <LanguageCard />
 
       <Card>

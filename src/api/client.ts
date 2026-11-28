@@ -1,3 +1,6 @@
+import { getLocale } from "../i18n/locale";
+import { SESSION_EXPIRED_EVENT, clearSessionToken, currentSessionToken } from "./session";
+
 export const API_BASE_URL = import.meta.env.VITE_FINVERSE_API_URL || "http://localhost:3000";
 
 export class ApiError extends Error {
@@ -18,12 +21,20 @@ type RequestOptions = Omit<RequestInit, "body"> & {
   body?: BodyInit;
 };
 
-/** Calls the Finverse API (`/api/v1` + path), parsing JSON and throwing ApiError on non-2xx. */
+/**
+ * Calls the Finverse API (`/api/v1` + path), parsing JSON and throwing ApiError on non-2xx.
+ * Sends the session token, if any, and the UI language (used by the API before sign-in). A 401
+ * on a request that had a token means the session ended: the token is dropped and
+ * SESSION_EXPIRED_EVENT tells the app to go back to the profile picker.
+ */
 export async function apiRequest<T = void>(path: string, { json, headers, ...options }: RequestOptions = {}): Promise<T> {
+  const token = currentSessionToken();
   const response = await fetch(`${API_BASE_URL}/api/v1${path}`, {
     ...options,
     headers: {
       Accept: "application/json",
+      "Accept-Language": getLocale(),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(json !== undefined ? { "Content-Type": "application/json" } : {}),
       ...headers,
     },
@@ -33,6 +44,10 @@ export async function apiRequest<T = void>(path: string, { json, headers, ...opt
   const text = await response.text();
   const data = text ? JSON.parse(text) : undefined;
 
+  if (response.status === 401 && token) {
+    clearSessionToken();
+    window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+  }
   if (!response.ok) throw new ApiError(response.status, data);
 
   return data as T;

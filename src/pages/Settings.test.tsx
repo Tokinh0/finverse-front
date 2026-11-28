@@ -51,7 +51,7 @@ describe("Settings", () => {
 
     await userEvent.type(screen.getByLabelText("Replace API key"), "sk-ant-2");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    expect(await screen.findByText("Could not save the settings.")).toBeInTheDocument();
+    expect(await screen.findByText("Your Claude API key was rejected.")).toBeInTheDocument();
   });
 
   it("removes the key after confirmation", async () => {
@@ -69,7 +69,7 @@ describe("Settings", () => {
   it("changes the app's language", async () => {
     const setLocale = vi.fn().mockResolvedValue(undefined);
     render(
-      <I18nContext.Provider value={{ locale: "en", t: en, setLocale }}>
+      <I18nContext.Provider value={{ locale: "en", t: en, setLocale, showLocale: vi.fn() }}>
         <Settings />
       </I18nContext.Provider>
     );

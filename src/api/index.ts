@@ -1,4 +1,5 @@
 import { apiRequest } from "./client";
+import { clearSessionToken, currentSessionToken, setSessionToken } from "./session";
 import type {
   CategorizationProgressMonth,
   CategorySuggestion,
@@ -19,6 +20,7 @@ import type {
   MonthlyByCategoryReport,
   MonthlyBySubcategoryReport,
   PortfolioDashboardData,
+  Profile,
   RecategorizeParams,
   RecategorizeResult,
   Subcategory,
@@ -30,6 +32,44 @@ import type { RawMonthlyStatement } from "../presenters/MonthlyStatementPresente
 import type { RawSummaryLine } from "../presenters/SummaryLinePresenter";
 
 export { ApiError, API_BASE_URL } from "./client";
+
+export interface ProfileUpdate {
+  name?: string;
+  locale?: string;
+  password?: string;
+  remove_password?: boolean;
+  current_password?: string;
+}
+
+/** The profile picker (no sign-in needed) and the signed-in profile. */
+export const profilesApi = {
+  list: () => apiRequest<Profile[]>("/profiles"),
+  create: (profile: { name: string; password?: string; locale?: string }) =>
+    apiRequest<Profile>("/profiles", { method: "POST", json: { profile } }),
+  current: () => apiRequest<Profile>("/profile"),
+  update: (profile: ProfileUpdate) => apiRequest<Profile>("/profile", { method: "PATCH", json: { profile } }),
+};
+
+/** Signing in keeps the session token in this browser; signing out drops it. */
+export const sessionApi = {
+  current: () => apiRequest<{ profile: Profile }>("/session"),
+  signIn: async (profileId: number, password?: string) => {
+    const result = await apiRequest<{ token: string; profile: Profile }>("/session", {
+      method: "POST",
+      json: { profile_id: profileId, ...(password ? { password } : {}) },
+    });
+    setSessionToken(result.token);
+    return result.profile;
+  },
+  signOut: async () => {
+    try {
+      await apiRequest("/session", { method: "DELETE" });
+    } finally {
+      clearSessionToken();
+    }
+  },
+  hasToken: () => currentSessionToken() !== null,
+};
 
 export const statementsApi = {
   list: () => apiRequest<RawMonthlyStatement[]>("/monthly_statements"),
