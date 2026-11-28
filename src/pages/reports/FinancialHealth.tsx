@@ -4,6 +4,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { reportsApi } from "../../api";
 import CategoryRanking from "../../components/health/CategoryRanking";
 import CategoryTrendChart from "../../components/health/CategoryTrendChart";
+import SavingsOpportunities from "../../components/health/SavingsOpportunities";
 import StatTile from "../../components/health/StatTile";
 import YearSummary from "../../components/health/YearSummary";
 import { ErrorMessage, Loading } from "../../components/LoadingState";
@@ -116,6 +117,16 @@ export default function FinancialHealth({ showTotals }: Props) {
           <StatTile label={h.net} value={money(current.net)} />
         </div>
       </section>
+
+      {report.savings && (
+        <section className="health-section" aria-labelledby="health-savings">
+          <div className="health-section-head">
+            <h2 id="health-savings">{h.savings.title}</h2>
+            <p className="health-sub">{h.savings.sub(report.savings.baseline_months)}</p>
+          </div>
+          <SavingsOpportunities savings={report.savings} showTotals={showTotals} />
+        </section>
+      )}
 
       <section className="health-section" aria-labelledby="health-categories">
         <div className="health-section-head">
