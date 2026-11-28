@@ -177,7 +177,6 @@ export interface Preferences {
 }
 
 export const settingsApi = {
-  preferences: () => apiRequest<Preferences>("/settings/preferences"),
   updatePreferences: (preferences: { locale: string }) =>
     apiRequest<Preferences>("/settings/preferences", { method: "PUT", json: { preferences } }),
   claude: () => apiRequest<ClaudeSettings>("/settings/claude"),

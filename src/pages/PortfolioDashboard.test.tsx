@@ -14,7 +14,6 @@ const btc = asset({ id: 2, ticker: "BTC", description: "Bitcoin", asset_type: "c
 const dashboard = (assets = [cdb, btc]) => ({
   assets,
   asset_types: { reserva: "Reserva", criptomoedas: "Criptomoedas" },
-  portfolioData: [],
 });
 
 const renderPage = (showTotals = true, path = "/assets") =>

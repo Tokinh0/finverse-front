@@ -36,7 +36,6 @@ export const mockApiModule = () => ({
     market: vi.fn(async () => ({ brapi_configured: false, masked_brapi_token: null, brapi_from_env: false })),
     updateMarket: vi.fn(),
     removeBrapiToken: vi.fn(),
-    preferences: vi.fn(async () => ({ locale: "en", available_locales: ["en", "pt-BR"] })),
     updatePreferences: vi.fn(async ({ locale }: { locale: string }) => ({ locale, available_locales: ["en", "pt-BR"] })),
   },
   // The Market page is the home page: by default its data never arrives, unless a test sets it.
