@@ -2,8 +2,24 @@ import { vi } from "vitest";
 
 // Shared vi.mock factory for "../api": every endpoint is a vi.fn() the test configures.
 export const mockApiModule = () => ({
-  ApiError: class ApiError extends Error {},
+  ApiError: class ApiError extends Error {
+    status: number;
+    body: unknown;
+    constructor(status = 500, body?: unknown) {
+      super(`Request failed with status ${status}`);
+      this.status = status;
+      this.body = body;
+    }
+  },
   API_BASE_URL: "http://api.test",
+  profilesApi: { list: vi.fn(), create: vi.fn(), current: vi.fn(), update: vi.fn() },
+  // Tests run signed in unless they say otherwise (see src/test/profile.tsx).
+  sessionApi: {
+    current: vi.fn(),
+    signIn: vi.fn(),
+    signOut: vi.fn(async () => {}),
+    hasToken: vi.fn(() => false),
+  },
   statementsApi: { list: vi.fn(), upload: vi.fn(), remove: vi.fn() },
   categoriesApi: { list: vi.fn(), create: vi.fn(), update: vi.fn() },
   subcategoriesApi: { list: vi.fn(), create: vi.fn(), update: vi.fn() },

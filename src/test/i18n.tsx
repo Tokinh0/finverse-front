@@ -8,5 +8,5 @@ import { MESSAGES, setCurrentLocale, type Locale } from "../i18n/locale";
  */
 export function inLocale(locale: Locale, ui: ReactElement) {
   setCurrentLocale(locale);
-  return <I18nContext.Provider value={{ locale, t: MESSAGES[locale], setLocale: async () => {} }}>{ui}</I18nContext.Provider>;
+  return <I18nContext.Provider value={{ locale, t: MESSAGES[locale], setLocale: async () => {}, showLocale: () => {} }}>{ui}</I18nContext.Provider>;
 }

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError, apiRequest, API_BASE_URL } from "./client";
-import { alertsApi, keywordsApi, reportsApi, settingsApi, statementsApi, suggestionsApi, toQuery, transactionsApi } from "./index";
+import { getSessionToken, SESSION_EXPIRED_EVENT, setSessionToken } from "./session";
+import { alertsApi, keywordsApi, profilesApi, sessionApi, reportsApi, settingsApi, statementsApi, suggestionsApi, toQuery, transactionsApi } from "./index";
 
 const mockFetch = (status: number, body?: unknown) =>
   vi.spyOn(globalThis, "fetch").mockResolvedValue(
@@ -132,3 +133,70 @@ describe("suggestion and settings endpoints", () => {
   });
 });
 
+describe("sessions", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    window.localStorage.clear();
+  });
+
+  it("sends the session token and the UI language", async () => {
+    setSessionToken("abc");
+    const fetchSpy = mockFetch(200, []);
+
+    await keywordsApi.list();
+
+    expect(fetchSpy.mock.calls[0][1]?.headers).toMatchObject({ Authorization: "Bearer abc", "Accept-Language": "en" });
+  });
+
+  it("sends no Authorization header without a session", async () => {
+    const fetchSpy = mockFetch(200, []);
+
+    await profilesApi.list();
+
+    expect(fetchSpy.mock.calls[0][1]?.headers).not.toHaveProperty("Authorization");
+  });
+
+  it("forgets an expired session and tells the app", async () => {
+    setSessionToken("old");
+    mockFetch(401, { error: "unauthenticated" });
+    const expired = vi.fn();
+    window.addEventListener(SESSION_EXPIRED_EVENT, expired);
+
+    await expect(keywordsApi.list()).rejects.toMatchObject({ status: 401 });
+
+    expect(getSessionToken()).toBeNull();
+    expect(expired).toHaveBeenCalled();
+    window.removeEventListener(SESSION_EXPIRED_EVENT, expired);
+  });
+
+  it("keeps the token after signing in and drops it after signing out", async () => {
+    const fetchSpy = mockFetch(201, { token: "new", profile: { id: 2, name: "Blake" } });
+
+    await expect(sessionApi.signIn(2, "secret")).resolves.toMatchObject({ name: "Blake" });
+    expect(JSON.parse(fetchSpy.mock.calls[0][1]?.body as string)).toEqual({ profile_id: 2, password: "secret" });
+    expect(sessionApi.hasToken()).toBe(true);
+
+    fetchSpy.mockResolvedValue(new Response(null, { status: 204 }));
+    await sessionApi.signOut();
+    expect(sessionApi.hasToken()).toBe(false);
+  });
+
+  it("drops the token even when signing out fails", async () => {
+    setSessionToken("abc");
+    mockFetch(500);
+
+    await expect(sessionApi.signOut()).rejects.toBeInstanceOf(ApiError);
+    expect(getSessionToken()).toBeNull();
+  });
+
+  it("updates the signed-in profile under `profile`", async () => {
+    const fetchSpy = mockFetch(200, {});
+
+    await profilesApi.update({ password: "newpass", current_password: "old" });
+
+    const [url, init] = fetchSpy.mock.calls[0];
+    expect(url).toBe(`${API_BASE_URL}/api/v1/profile`);
+    expect(init?.method).toBe("PATCH");
+    expect(JSON.parse(init?.body as string)).toEqual({ profile: { password: "newpass", current_password: "old" } });
+  });
+});

@@ -5,6 +5,7 @@ import type {
   CategorySuggestion,
   Keyword,
   KeywordHealth,
+  Profile,
   RuleSuggestion,
   Subcategory,
   SuggestionRun,
@@ -167,3 +168,11 @@ export const progressMonth = (month: string, counts: Partial<CategorizationProgr
   return { month, total, counts: full, keyword_share: total ? full.keyword / total : null };
 };
 
+export const profile = (overrides: Partial<Profile> = {}): Profile => ({
+  id: 1,
+  name: "Alex",
+  color_code: null,
+  locale: "en",
+  password_protected: false,
+  ...overrides,
+});

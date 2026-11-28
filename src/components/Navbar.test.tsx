@@ -3,7 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { SuggestionsSummaryContext } from "../hooks/suggestionsSummary";
-import { suggestionRun, suggestionsSummary } from "../test/fixtures";
+import { ProfileContext } from "../profile/context";
+import { profile, suggestionRun, suggestionsSummary } from "../test/fixtures";
 import AppNavbar from "./Navbar";
 import { inLocale } from "../test/i18n";
 
@@ -19,6 +20,7 @@ describe("AppNavbar", () => {
     expect(screen.getByRole("link", { name: "Keywords" })).toHaveClass("active");
     expect(screen.getByRole("link", { name: "Statements" })).toHaveAttribute("href", "/statements");
     expect(screen.queryByRole("link", { name: "Goals" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute("href", "/painel");
 
     await userEvent.click(screen.getByRole("checkbox"));
     expect(setShowTotals).toHaveBeenCalledWith(true);
@@ -62,5 +64,22 @@ describe("AppNavbar", () => {
 
     expect(screen.getByRole("link", { name: "Transações" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Configurações" })).toHaveAttribute("href", "/settings");
+  });
+
+  it("shows the signed-in profile with a way to switch", async () => {
+    const signOut = vi.fn(async () => {});
+    render(
+      <ProfileContext.Provider value={{ status: "signedIn", profile: profile({ name: "Blake" }), signIn: vi.fn(), signOut, setProfile: vi.fn() }}>
+        <MemoryRouter>
+          <AppNavbar showTotals={false} setShowTotals={vi.fn()} />
+        </MemoryRouter>
+      </ProfileContext.Provider>
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Profile: Blake" }));
+    expect(screen.getByRole("link", { name: "Profile settings" })).toHaveAttribute("href", "/settings");
+
+    await userEvent.click(screen.getByRole("button", { name: "Switch profile" }));
+    expect(signOut).toHaveBeenCalled();
   });
 });
