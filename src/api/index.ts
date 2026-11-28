@@ -95,6 +95,8 @@ export const categoriesApi = {
   create: (category: CategoryParams) => apiRequest<Category>("/categories", { method: "POST", json: { category } }),
   update: (id: number, category: CategoryParams) =>
     apiRequest<Category>(`/categories/${id}`, { method: "PATCH", json: { category } }),
+  /** Deletes its subcategories and their rules too; their transactions move to the fallback. */
+  remove: (id: number) => apiRequest(`/categories/${id}`, { method: "DELETE" }),
 };
 
 export const subcategoriesApi = {
@@ -103,6 +105,8 @@ export const subcategoriesApi = {
     apiRequest<Subcategory>("/subcategories", { method: "POST", json: { subcategory } }),
   update: (id: number, subcategory: SubcategoryParams) =>
     apiRequest<Subcategory>(`/subcategories/${id}`, { method: "PATCH", json: { subcategory } }),
+  /** Deletes its rules too; its transactions move to the fallback subcategory. */
+  remove: (id: number) => apiRequest(`/subcategories/${id}`, { method: "DELETE" }),
 };
 
 type KeywordParams = { name: string; subcategory_id: number; min_amount?: number | null; max_amount?: number | null };
