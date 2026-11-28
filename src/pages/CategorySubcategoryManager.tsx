@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { categoriesApi, subcategoriesApi } from "../api";
+import ColorThemePicker from "../components/categories/ColorThemePicker";
 import type { Category, Subcategory } from "../types";
 import { useI18n } from "../i18n/context";
 import { subcategoryTypes } from "../utils/categories";
@@ -87,11 +88,34 @@ export default function CategorySubcategoryManager() {
     }
   };
 
+  // Themes only color what already exists in the API.
+  const saved = useMemo(
+    () => categories.filter((cat) => !isNew(cat)).map((cat) => ({ ...cat, subcategories: cat.subcategories.filter((sub) => !isNew(sub)) })),
+    [categories]
+  );
+
+  const applyThemeColors = (updated: Category[]) => {
+    const colors = new Map<string, string | null | undefined>();
+    for (const cat of updated) {
+      colors.set(`c${cat.id}`, cat.color_code);
+      for (const sub of cat.subcategories) colors.set(`s${sub.id}`, sub.color_code);
+    }
+    setCategories((prev) =>
+      prev.map((cat) => ({
+        ...cat,
+        color_code: colors.has(`c${cat.id}`) ? colors.get(`c${cat.id}`) : cat.color_code,
+        subcategories: cat.subcategories.map((sub) => ({ ...sub, color_code: colors.has(`s${sub.id}`) ? colors.get(`s${sub.id}`) : sub.color_code })),
+      }))
+    );
+  };
+
   if (loading) return <p>{t.common.loading}</p>;
 
   return (
-    <div style={{ padding: "1rem", maxWidth: "600px", margin: "0 auto" }}>
+    <div style={{ padding: "1rem", maxWidth: "960px", margin: "0 auto" }}>
       <h2>{c.title}</h2>
+      {saved.length > 0 && <ColorThemePicker categories={saved} onApplied={applyThemeColors} />}
+      <div style={{ maxWidth: "600px", margin: "0 auto" }}>
       {categories.map((category) => (
         <div key={category.id} style={{ marginBottom: "1.5rem", marginLeft: "6rem", marginTop: "3rem" }}>
           <div className="mb-3">
@@ -159,6 +183,7 @@ export default function CategorySubcategoryManager() {
         </div>
       ))}
       <button onClick={addCategory}>{c.addCategory}</button>
+      </div>
     </div>
   );
 }

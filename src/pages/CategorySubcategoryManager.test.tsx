@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { categoriesApi, subcategoriesApi } from "../api";
 import { category, subcategory } from "../test/fixtures";
+import { COLOR_THEMES, planTheme } from "../utils/colorThemes";
 import CategorySubcategoryManager from "./CategorySubcategoryManager";
 
 vi.mock("../api", async () => (await import("../test/mockApi")).mockApiModule());
@@ -56,4 +57,22 @@ describe("CategorySubcategoryManager", () => {
     await userEvent.tab();
     expect(subcategoriesApi.create).toHaveBeenCalledWith(expect.objectContaining({ name: "Uber", category_id: 1 }));
   });
+
+  it("applies a color theme and shows the new colors in the editors", async () => {
+    vi.mocked(categoriesApi.update).mockResolvedValue(category());
+    vi.mocked(subcategoriesApi.update).mockResolvedValue(subcategory());
+    render(<CategorySubcategoryManager />);
+    await screen.findByDisplayValue("Conforto");
+
+    await userEvent.click(screen.getByRole("radio", { name: /Earth/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Apply Earth" }));
+    await userEvent.click(screen.getByRole("button", { name: "Apply theme" }));
+
+    await screen.findByRole("status");
+    const plan = planTheme(COLOR_THEMES.find((theme) => theme.id === "earth")!, [category()]);
+    expect(screen.getByLabelText("Category color")).toHaveValue(plan.categories.get(1));
+    expect(screen.getByLabelText("Subcategory color")).toHaveValue(plan.subcategories.get(10));
+    expect(screen.getByText("Your colors use the Earth theme.")).toBeInTheDocument();
+  });
 });
+
