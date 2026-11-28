@@ -3,4 +3,3 @@ export const CHART_COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AA336
 
 export const colorAt = (index: number, color?: string | null) => color || CHART_COLORS[index % CHART_COLORS.length];
 
-export const formatBRL = (value: unknown) => (typeof value === "number" ? `R$ ${value.toFixed(2)}` : `R$ ${value}`);

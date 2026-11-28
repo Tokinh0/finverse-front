@@ -1,11 +1,11 @@
-import { Container } from "react-bootstrap";
 import { reportsApi } from "../../api";
 import { ErrorMessage, Loading } from "../../components/LoadingState";
+import { ReportMonth, ReportPage, ReportPanel } from "../../components/reports/MonthlyReportLayout";
 import SubcategoryChart from "../../components/SubcategoryChart";
 import { useCreditDebitReport } from "../../hooks/useCreditDebitReport";
 import { useI18n } from "../../i18n/context";
 import type { SubcategoryMonth } from "../../types";
-import "./Report.css";
+import { longMonth } from "../../utils/reportSlices";
 
 interface Props {
   showTotals: boolean;
@@ -20,27 +20,8 @@ const EMPTY_MONTH: SubcategoryMonth = {
   total_received: 0,
 };
 
-const TOTAL_KEYS: (keyof Omit<SubcategoryMonth, "subcategories">)[] = ["total", "total_invested", "total_transfered", "total_expended", "total_received"];
-function Panel({ title, data, color, showTotals }: { title: string; data: SubcategoryMonth; color: string; showTotals: boolean }) {
-  const { t } = useI18n();
-  return (
-    <div className="panel">
-      <h5>{title}</h5>
-      <div className="chart-wrapper">
-        <SubcategoryChart data={data.subcategories} showTotals={showTotals} />
-      </div>
-      {showTotals && (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-          {TOTAL_KEYS.filter((key) => data[key] > 0).map((key) => (
-            <p key={key} className="total" style={{ color }}>
-              {t.reports.totals[key]}: R$ {data[key].toFixed(2)}
-            </p>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+// "total" is the panel's headline; the others break it down, shown only when non-zero.
+const BREAKDOWN_KEYS = ["total_received", "total_expended", "total_invested", "total_transfered"] as const;
 
 export default function MonthlyBySubcategory({ showTotals }: Props) {
   const { credit, debit, months, loading, error } = useCreditDebitReport(reportsApi.monthlyBySubcategory);
@@ -49,20 +30,27 @@ export default function MonthlyBySubcategory({ showTotals }: Props) {
   if (loading) return <Loading message={t.reports.loadingBySubcategory} />;
   if (error) return <ErrorMessage message={error} />;
 
+  const breakdown = (data: SubcategoryMonth) =>
+    BREAKDOWN_KEYS.filter((key) => data[key] > 0).map((key) => ({ label: t.reports.totals[key], value: data[key] }));
+
   return (
-    <Container className="monthly-report-container">
-      <h1>{t.reports.bySubcategoryTitle}</h1>
-      <div className="month-cards">
-        {months.map((month) => (
-          <div key={month} className="month-card">
-            <h4>{month}</h4>
-            <div className="panels">
-              <Panel title={t.reports.gains} data={credit[month] || EMPTY_MONTH} color="green" showTotals={showTotals} />
-              <Panel title={t.reports.expenses} data={debit[month] || EMPTY_MONTH} color="red" showTotals={showTotals} />
-            </div>
-          </div>
-        ))}
-      </div>
-    </Container>
+    <ReportPage title={t.reports.bySubcategoryTitle} subtitle={t.reports.breakdown.subtitleBySubcategory}>
+      {months.map((month) => {
+        const moneyIn = credit[month] || EMPTY_MONTH;
+        const moneyOut = debit[month] || EMPTY_MONTH;
+        const label = longMonth(month);
+
+        return (
+          <ReportMonth key={month} label={label} moneyIn={moneyIn.total} moneyOut={moneyOut.total} showTotals={showTotals}>
+            <ReportPanel kind="in" title={t.reports.gains} total={moneyIn.total} breakdown={breakdown(moneyIn)} showTotals={showTotals}>
+              <SubcategoryChart data={moneyIn.subcategories} showTotals={showTotals} context={`${t.reports.gains} · ${label}`} />
+            </ReportPanel>
+            <ReportPanel kind="out" title={t.reports.expenses} total={moneyOut.total} breakdown={breakdown(moneyOut)} showTotals={showTotals}>
+              <SubcategoryChart data={moneyOut.subcategories} showTotals={showTotals} context={`${t.reports.expenses} · ${label}`} />
+            </ReportPanel>
+          </ReportMonth>
+        );
+      })}
+    </ReportPage>
   );
 }

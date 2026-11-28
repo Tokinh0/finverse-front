@@ -1,12 +1,16 @@
-import { Container } from "react-bootstrap";
 import { reportsApi } from "../../api";
 import CategoryChart from "../../components/CategoryChart";
 import { ErrorMessage, Loading } from "../../components/LoadingState";
+import { ReportMonth, ReportPage, ReportPanel } from "../../components/reports/MonthlyReportLayout";
 import { useCreditDebitReport } from "../../hooks/useCreditDebitReport";
 import { useI18n } from "../../i18n/context";
-import "./Report.css";
+import { longMonth, sumTotals, toCategorySlices } from "../../utils/reportSlices";
 
-export default function MonthlyByCategory() {
+interface Props {
+  showTotals: boolean;
+}
+
+export default function MonthlyByCategory({ showTotals }: Props) {
   const { credit, debit, months, loading, error } = useCreditDebitReport(reportsApi.monthlyByCategory);
   const { t } = useI18n();
 
@@ -14,25 +18,26 @@ export default function MonthlyByCategory() {
   if (error) return <ErrorMessage message={error} />;
 
   return (
-    <Container className="monthly-report-container">
-      <h1>{t.reports.byCategoryTitle}</h1>
-      <div className="month-cards">
-        {months.map((month) => (
-          <div key={month} className="month-card">
-            <h4>{month}</h4>
-            <div className="panels">
-              <div className="panel">
-                <h5>{t.reports.gains}</h5>
-                <CategoryChart data={credit[month] || {}} />
-              </div>
-              <div className="panel">
-                <h5>{t.reports.expenses}</h5>
-                <CategoryChart data={debit[month] || {}} />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </Container>
+    <ReportPage title={t.reports.byCategoryTitle} subtitle={t.reports.breakdown.subtitleByCategory}>
+      {months.map((month) => {
+        const moneyIn = credit[month] || {};
+        const moneyOut = debit[month] || {};
+        // The API sends no month totals here: each side is the sum of its categories.
+        const totalIn = sumTotals(toCategorySlices(moneyIn));
+        const totalOut = sumTotals(toCategorySlices(moneyOut));
+        const label = longMonth(month);
+
+        return (
+          <ReportMonth key={month} label={label} moneyIn={totalIn} moneyOut={totalOut} showTotals={showTotals}>
+            <ReportPanel kind="in" title={t.reports.gains} total={totalIn} showTotals={showTotals}>
+              <CategoryChart data={moneyIn} showTotals={showTotals} context={`${t.reports.gains} · ${label}`} />
+            </ReportPanel>
+            <ReportPanel kind="out" title={t.reports.expenses} total={totalOut} showTotals={showTotals}>
+              <CategoryChart data={moneyOut} showTotals={showTotals} context={`${t.reports.expenses} · ${label}`} />
+            </ReportPanel>
+          </ReportMonth>
+        );
+      })}
+    </ReportPage>
   );
 }

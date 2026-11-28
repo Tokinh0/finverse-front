@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { reportsApi } from "../../api";
@@ -24,17 +24,36 @@ describe("MonthlyByCategory", () => {
       debit: { "2025-01": { CONFORTO: { color_code: "#f00", subcategories: { FOOD: { total: 10, transactions: [] } } } } },
     });
 
-    render(<MonthlyByCategory />);
+    render(<MonthlyByCategory showTotals={false} />);
 
-    expect(await screen.findByRole("heading", { name: "2025-01" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "January 2025" })).toBeInTheDocument();
     expect(screen.getByText("No data to display.")).toBeInTheDocument(); // no credits that month
+    expect(screen.queryByText("Balance")).not.toBeInTheDocument();
+  });
+
+  it("sums each side from its categories for the month summary", async () => {
+    vi.mocked(reportsApi.monthlyByCategory).mockResolvedValue({
+      credit: { "2025-01": { RENDA: { color_code: null, subcategories: { SALARIO: { total: 100, transactions: [] } } } } },
+      debit: {
+        "2025-01": {
+          CONFORTO: { color_code: "#f00", subcategories: { FOOD: { total: 30, transactions: [] }, UBER: { total: 10, transactions: [] } } },
+          LAZER: { color_code: "#0f0", subcategories: { CINEMA: { total: 20, transactions: [] } } },
+        },
+      },
+    });
+
+    render(<MonthlyByCategory showTotals />);
+
+    const card = await screen.findByRole("article");
+    expect(within(card).getByText("Money out").parentElement).toHaveTextContent("R$ 60,00");
+    expect(within(card).getByText("Balance").parentElement).toHaveTextContent("R$ 40,00▲ surplus");
   });
 
   it("shows an error when the report fails", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(reportsApi.monthlyByCategory).mockRejectedValue(new Error("x"));
 
-    render(<MonthlyByCategory />);
+    render(<MonthlyByCategory showTotals={false} />);
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not load the report");
   });
@@ -51,17 +70,27 @@ describe("MonthlyBySubcategory", () => {
   it("orders months newest first and hides totals by default", async () => {
     render(<MonthlyBySubcategory showTotals={false} />);
 
-    const headings = await screen.findAllByRole("heading", { level: 4 });
-    expect(headings.map((h) => h.textContent)).toEqual(["2025-02", "2025-01"]);
-    expect(screen.queryByText(/Total:/)).not.toBeInTheDocument();
+    const headings = await screen.findAllByRole("heading", { level: 2 });
+    expect(headings.map((h) => h.textContent)).toEqual(["February 2025", "January 2025"]);
+    expect(screen.queryByText("Balance")).not.toBeInTheDocument();
+    expect(screen.queryByText(/R\$ \d/)).not.toBeInTheDocument();
   });
 
-  it("shows only the non-zero totals when enabled", async () => {
+  it("shows the month summary and only the non-zero breakdown totals when enabled", async () => {
     render(<MonthlyBySubcategory showTotals />);
 
-    expect(await screen.findByText("Total Received: R$ 1000.00")).toBeInTheDocument();
-    expect(screen.getAllByText("Total Expended: R$ 50.00")).toHaveLength(2);
-    expect(screen.queryByText(/Total Invested/)).not.toBeInTheDocument();
+    const [february] = await screen.findAllByRole("article");
+    expect(within(february).getByText("Balance").parentElement).toHaveTextContent("R$ 950,00▲ surplus");
+    expect(within(february).getByText("Total Received").nextSibling).toHaveTextContent("R$ 1.000,00");
+    expect(within(february).getByText("Total Expended").nextSibling).toHaveTextContent("R$ 50,00");
+    expect(screen.queryByText("Total Invested")).not.toBeInTheDocument();
+  });
+
+  it("marks a month that spent more than it received", async () => {
+    render(<MonthlyBySubcategory showTotals />);
+
+    const [, january] = await screen.findAllByRole("article");
+    expect(within(january).getByText("Balance").parentElement).toHaveTextContent("-R$ 50,00▼ deficit");
   });
 
   it("keeps the chart type per chart", async () => {

@@ -43,7 +43,7 @@ function AppRoutes() {
         <Route path="/categories&subcategories" element={<CategorySubcategoryManager />} />
         <Route path="/keywords" element={<KeywordsCrud />} />
         <Route path="/reports/financial-health" element={<FinancialHealth showTotals={showTotals} />} />
-        <Route path="/reports/monthly-by-category" element={<MonthlyByCategory />} />
+        <Route path="/reports/monthly-by-category" element={<MonthlyByCategory showTotals={showTotals} />} />
         <Route path="/reports/monthly-by-subcategory" element={<MonthlyBySubcategory showTotals={showTotals} />} />
         <Route path="/assets" element={<PortfolioDashboard showTotals={showTotals} />} />
         <Route path="/suggestions" element={<Suggestions showTotals={showTotals} />} />
