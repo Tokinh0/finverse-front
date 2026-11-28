@@ -1,0 +1,177 @@
+/* Assets page: totals, allocation and holdings. Prefix: pf- (same look as the Categorization page). */
+
+.pf-page {
+  --pf-ink: #191919;
+  --pf-muted: #6b7280;
+  --pf-line: #e5e7eb;
+  --pf-soft: #f6f7f9;
+  --pf-card: #fff;
+  --pf-focus: #2563eb;
+  padding-top: 2.5rem;
+  padding-bottom: 3rem;
+  text-align: left;
+  color: var(--pf-ink);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem;
+}
+
+.pf-muted { color: var(--pf-muted); }
+.pf-page p { margin-bottom: 0; }
+.pf-num { font-variant-numeric: tabular-nums; }
+.pf-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; display: inline-block; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); }
+
+/* ---- hero ---------------------------------------------------------------------------------- */
+
+.pf-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.25rem 2rem;
+  padding: 1.5rem 1.75rem;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 10% 15%, rgba(37, 125, 224, 0.16), transparent 45%),
+    radial-gradient(circle at 88% 0%, rgba(0, 184, 148, 0.14), transparent 50%),
+    radial-gradient(circle at 55% 100%, rgba(242, 166, 0, 0.12), transparent 45%),
+    var(--pf-card);
+  border: 1px solid var(--pf-line);
+}
+.pf-hero h2 { font-size: 1.75rem; font-weight: 700; margin: 0 0 0.35rem; letter-spacing: -0.01em; }
+.pf-hero p { color: var(--pf-muted); max-width: 52ch; }
+.pf-hero .pf-hidden-hint { font-size: 0.85rem; margin-top: 0.4rem; }
+
+.pf-stats { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 0; }
+.pf-stat { min-width: 112px; padding: 0.6rem 0.9rem; border-radius: 12px; background: rgba(255, 255, 255, 0.78); border: 1px solid var(--pf-line); }
+.pf-stat dt { font-size: 0.72rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: var(--pf-muted); }
+.pf-stat dd { margin: 0; font-size: 1.3rem; font-weight: 650; font-variant-numeric: tabular-nums; line-height: 1.25; }
+.pf-stat[data-hero] dd { font-size: 1.6rem; }
+.pf-stat-meta { font-size: 0.85rem; font-weight: 500; color: var(--pf-muted); }
+
+.pf-notice { margin: 0; }
+
+/* ---- cards --------------------------------------------------------------------------------- */
+
+.pf-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; }
+
+.pf-card { background: var(--pf-card); border: 1px solid var(--pf-line); border-radius: 16px; overflow: hidden; }
+.pf-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; padding: 1.1rem 1.25rem 0.9rem; }
+.pf-card-head h2 { font-size: 1.1rem; font-weight: 650; margin: 0; }
+.pf-card-head p { color: var(--pf-muted); font-size: 0.85rem; margin-top: 0.2rem; }
+
+/* ---- allocation ---------------------------------------------------------------------------- */
+
+.pf-bar-wrap { position: relative; padding: 0 1.25rem; }
+/* one 100% bar; 2px surface gaps between segments, rounded ends */
+.pf-bar { display: flex; gap: 2px; height: 26px; border-radius: 6px; overflow: hidden; background: var(--pf-card); }
+.pf-bar-segment { min-width: 3px; transition: opacity 0.15s; }
+.pf-bar-segment[data-dimmed] { opacity: 0.3; }
+.pf-readout { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; min-height: 1.6rem; margin-top: 0.5rem !important; font-size: 0.85rem; }
+
+.pf-types { list-style: none; margin: 0.9rem 0 0; padding: 0 0.5rem 0.75rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); column-gap: 0.5rem; }
+.pf-type {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-areas: "dot name share value" "dot track track track";
+  align-items: center;
+  gap: 0.2rem 0.6rem;
+  padding: 0.55rem 0.75rem;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  text-align: left;
+}
+.pf-type:hover { background: var(--pf-soft); }
+.pf-type[aria-pressed="true"] { background: #e8efff; box-shadow: inset 3px 0 0 var(--pf-focus); }
+.pf-type:focus-visible { outline: 2px solid var(--pf-focus); outline-offset: -2px; }
+.pf-type .pf-dot { grid-area: dot; align-self: start; margin-top: 0.35rem; }
+.pf-type-name { grid-area: name; font-size: 0.9rem; min-width: 0; display: grid; }
+.pf-type-name strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-type-name small { color: var(--pf-muted); font-size: 0.75rem; }
+.pf-type-share { grid-area: share; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; font-size: 0.9rem; }
+.pf-type-value { grid-area: value; text-align: right; color: var(--pf-muted); font-variant-numeric: tabular-nums; font-size: 0.82rem; white-space: nowrap; }
+.pf-type-track { grid-area: track; height: 6px; border-radius: 3px; background: #eef0f3; overflow: hidden; }
+.pf-type-track span { display: block; height: 100%; border-radius: 3px; }
+
+/* ---- holdings ------------------------------------------------------------------------------ */
+
+.pf-holdings .pf-card-head { align-items: center; }
+.pf-tools { display: grid; gap: 0.75rem; padding: 0 1.25rem 0.9rem; border-bottom: 1px solid var(--pf-line); }
+.pf-tools-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.pf-tools-row .form-control { flex: 1 1 240px; }
+.pf-tools-row .form-select { flex: 0 1 200px; }
+
+.pf-pills { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.pf-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--pf-line);
+  border-radius: 999px;
+  background: var(--pf-card);
+  color: var(--pf-ink);
+  font-size: 0.85rem;
+}
+.pf-pill:hover { border-color: #c2c7d0; }
+.pf-pill[aria-pressed="true"] { background: var(--pf-ink); border-color: var(--pf-ink); color: #fff; }
+.pf-pill:focus-visible { outline: 2px solid var(--pf-focus); outline-offset: 2px; }
+.pf-pill-count { font-size: 0.72rem; opacity: 0.7; font-variant-numeric: tabular-nums; }
+
+.pf-holdings { overflow-x: auto; }
+.pf-table { --bs-table-bg: transparent; }
+.pf-table th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--pf-muted); font-weight: 600; padding: 0.6rem 0.75rem; white-space: nowrap; }
+.pf-table td { padding: 0.6rem 0.75rem; font-size: 0.9rem; }
+.pf-table th:first-child, .pf-table td:first-child { padding-left: 1.25rem; }
+.pf-table th:last-child, .pf-table td:last-child { padding-right: 1.25rem; }
+.pf-asset { display: grid; min-width: 140px; }
+.pf-asset .pf-muted { font-size: 0.8rem; }
+.pf-value { font-weight: 600; white-space: nowrap; }
+.pf-type-cell { display: inline-flex; align-items: center; gap: 0.4rem; }
+.pf-share { display: flex; align-items: center; gap: 0.5rem; min-width: 120px; }
+.pf-share-track { flex: 1; height: 6px; border-radius: 3px; background: #eef0f3; overflow: hidden; min-width: 50px; }
+.pf-share-track span { display: block; height: 100%; border-radius: 3px; }
+.pf-share .pf-num { font-size: 0.82rem; min-width: 3.2rem; text-align: right; }
+.pf-rating { display: inline-block; font-size: 0.78rem; font-weight: 600; padding: 0.1rem 0.5rem; border-radius: 999px; border: 1px solid var(--pf-line); background: var(--pf-soft); font-variant-numeric: tabular-nums; }
+.pf-rating[data-level="high"] { background: #191919; border-color: #191919; color: #fff; }
+.pf-empty-row { text-align: center; color: var(--pf-muted); padding: 2rem 1rem !important; }
+
+/* ---- empty & footer ------------------------------------------------------------------------ */
+
+.pf-empty { display: grid; justify-items: center; gap: 0.9rem; padding: 3rem 1.5rem; text-align: center; }
+.pf-empty p { color: var(--pf-muted); max-width: 44ch; }
+.pf-empty-art { display: flex; align-items: flex-end; gap: 6px; height: 44px; }
+.pf-empty-art span { width: 22px; border-radius: 6px 6px 2px 2px; background: #257de0; height: 60%; }
+.pf-empty-art span:nth-child(2) { background: #00b894; height: 100%; }
+.pf-empty-art span:nth-child(3) { background: #f2a600; height: 40%; }
+
+.pf-footnote { font-size: 0.88rem; text-align: right; }
+
+/* ---- small screens ------------------------------------------------------------------------- */
+
+/* phones: each holding becomes a small card, labels from data-label */
+@media (max-width: 720px) {
+  .pf-table thead { display: none; }
+  .pf-table, .pf-table tbody { display: block; }
+  .pf-table tr { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.3rem; padding: 0.85rem 1rem; border-bottom: 1px solid var(--pf-line); }
+  .pf-table td { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; padding: 0 !important; border: 0; text-align: left !important; }
+  .pf-table td[data-label]::before { content: attr(data-label); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--pf-muted); }
+  .pf-table .pf-asset-cell, .pf-table .pf-actions { grid-column: 1 / -1; }
+  .pf-table .pf-asset-cell { margin-bottom: 0.2rem; }
+  .pf-table .pf-actions { margin-top: 0.35rem; }
+  .pf-table .pf-actions > div { justify-content: flex-start !important; }
+  .pf-share { min-width: 0; flex: 1; justify-content: flex-end; }
+  .pf-share-track { max-width: 60px; }
+  .pf-empty-row { display: block !important; }
+}
+
+@media (max-width: 560px) {
+  .pf-hero { padding: 1.25rem; }
+  .pf-stat { min-width: 0; flex: 1 1 40%; }
+  .pf-stat[data-hero] { flex-basis: 100%; }
+  .pf-card-head { padding: 1rem; }
+  .pf-tools { padding: 0 1rem 0.9rem; }
+}
