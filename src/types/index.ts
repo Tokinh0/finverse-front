@@ -49,17 +49,9 @@ export interface Asset {
   color_code?: string | null;
 }
 
-export interface PortfolioSlice {
-  name: string;
-  value: number;
-  percentage: string;
-  color?: string | null;
-}
-
 export interface PortfolioDashboardData {
   assets: Asset[];
   asset_types: AssetTypes;
-  portfolioData: PortfolioSlice[];
 }
 
 // GET /reports/monthly_by_category
