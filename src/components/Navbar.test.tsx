@@ -12,12 +12,13 @@ describe("AppNavbar", () => {
   it("links to every page and toggles totals", async () => {
     const setShowTotals = vi.fn();
     render(
-      <MemoryRouter initialEntries={["/keywords"]}>
+      <MemoryRouter initialEntries={["/categorization"]}>
         <AppNavbar showTotals={false} setShowTotals={setShowTotals} />
       </MemoryRouter>
     );
 
-    expect(screen.getByRole("link", { name: "Keywords" })).toHaveClass("active");
+    expect(screen.getByRole("link", { name: "Categorization" })).toHaveClass("active");
+    expect(screen.queryByRole("link", { name: "Keywords" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Statements" })).toHaveAttribute("href", "/statements");
     expect(screen.queryByRole("link", { name: "Goals" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute("href", "/painel");

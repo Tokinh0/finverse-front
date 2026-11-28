@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { keywordsApi, profilesApi, sessionApi, subcategoriesApi } from "./api";
+import { categoriesApi, keywordsApi, profilesApi, sessionApi } from "./api";
 import App from "./App";
 import { profile } from "./test/fixtures";
 
@@ -26,12 +26,22 @@ describe("App", () => {
   it("routes to the requested page when a profile is signed in", async () => {
     signedInAs();
     vi.mocked(keywordsApi.list).mockResolvedValue([]);
-    vi.mocked(subcategoriesApi.list).mockResolvedValue([]);
+    vi.mocked(categoriesApi.list).mockResolvedValue([]);
 
-    renderAt("/keywords");
+    renderAt("/categorization");
 
-    expect(await screen.findByRole("heading", { name: "Keywords Management" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Categorization" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Profile: Alex" })).toBeInTheDocument();
+  });
+
+  it("sends the old categories page to Categorization", async () => {
+    signedInAs();
+    vi.mocked(keywordsApi.list).mockResolvedValue([]);
+    vi.mocked(categoriesApi.list).mockResolvedValue([]);
+
+    renderAt("/categories&subcategories");
+
+    expect(await screen.findByRole("tab", { name: "Categories" })).toHaveAttribute("aria-selected", "true");
   });
 
   it("opens the dashboard right away from home when already signed in", async () => {
@@ -47,7 +57,7 @@ describe("App", () => {
     vi.mocked(profilesApi.list).mockResolvedValue([profile({ id: 2, name: "Blake" })]);
     vi.mocked(sessionApi.signIn).mockResolvedValue(profile({ id: 2, name: "Blake" }));
     vi.mocked(keywordsApi.list).mockResolvedValue([]);
-    vi.mocked(subcategoriesApi.list).mockResolvedValue([]);
+    vi.mocked(categoriesApi.list).mockResolvedValue([]);
 
     renderAt("/keywords");
 
@@ -56,7 +66,8 @@ describe("App", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Enter as Blake" }));
 
-    expect(await screen.findByRole("heading", { name: "Keywords Management" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Categorization" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /All rules/ })).toHaveAttribute("aria-selected", "true"); // /keywords → rules tab
     expect(sessionApi.signIn).toHaveBeenCalledWith(2, undefined);
   });
 

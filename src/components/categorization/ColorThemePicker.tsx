@@ -70,7 +70,7 @@ type Status = { type: "idle" } | { type: "confirm" } | { type: "saving"; done: n
 
 export default function ColorThemePicker({ categories, onApplied }: Props) {
   const { t } = useI18n();
-  const th = t.categoryManager.themes;
+  const th = t.categorization.themes;
   const active = useMemo(() => currentTheme(categories), [categories]);
   const [selected, setSelected] = useState<ColorThemeId>(active ?? COLOR_THEMES[0].id);
   const [status, setStatus] = useState<Status>({ type: "idle" });
