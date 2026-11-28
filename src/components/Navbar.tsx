@@ -15,8 +15,7 @@ const LINKS = [
   { to: "/statements", key: "statements" },
   { to: "/transactions", key: "transactions" },
   { to: "/alerts", key: "reviewCharges" },
-  { to: "/categories&subcategories", key: "categories" },
-  { to: "/keywords", key: "keywords" },
+  { to: "/categorization", key: "categorization" },
   { to: "/assets", key: "assets" },
 ] as const;
 export default function AppNavbar({ showTotals, setShowTotals }: Props) {

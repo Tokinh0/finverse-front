@@ -4,9 +4,8 @@ import AppNavbar from "./components/Navbar";
 import { SuggestionsSummaryContext, useSuggestionsSummaryState } from "./hooks/suggestionsSummary";
 import { usePersistentToggle } from "./hooks/usePersistentToggle";
 import I18nProvider from "./i18n/I18nProvider";
+import Categorization from "./pages/Categorization";
 import ChargeAlerts from "./pages/ChargeAlerts";
-import CategorySubcategoryManager from "./pages/CategorySubcategoryManager";
-import KeywordsCrud from "./pages/KeywordsCrud";
 import Market from "./pages/Market";
 import PortfolioDashboard from "./pages/PortfolioDashboard";
 import ProfilePicker from "./pages/ProfilePicker";
@@ -49,8 +48,10 @@ function AppRoutes() {
         <Route path="/statements" element={<Statements />} />
         <Route path="/transactions" element={<Transactions showTotals={showTotals} />} />
         <Route path="/alerts" element={<ChargeAlerts showTotals={showTotals} />} />
-        <Route path="/categories&subcategories" element={<CategorySubcategoryManager />} />
-        <Route path="/keywords" element={<KeywordsCrud />} />
+        <Route path="/categorization" element={<Categorization />} />
+        {/* the two pages it replaced */}
+        <Route path="/categories&subcategories" element={<Navigate to="/categorization" replace />} />
+        <Route path="/keywords" element={<Navigate to="/categorization?tab=rules" replace />} />
         <Route path="/reports/financial-health" element={<FinancialHealth showTotals={showTotals} />} />
         <Route path="/reports/monthly-by-category" element={<MonthlyByCategory showTotals={showTotals} />} />
         <Route path="/reports/monthly-by-subcategory" element={<MonthlyBySubcategory showTotals={showTotals} />} />
