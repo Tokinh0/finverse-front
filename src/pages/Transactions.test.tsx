@@ -1,8 +1,8 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { categoriesApi, suggestionsApi, transactionsApi } from "../api";
+import { categoriesApi, statementsApi, suggestionsApi, transactionsApi } from "../api";
 import { SuggestionsSummaryContext } from "../hooks/suggestionsSummary";
 import { category, categorySuggestion, ruleSuggestion, subcategory, suggestionsSummary, transaction, transactionsPage } from "../test/fixtures";
 import Transactions from "./Transactions";
@@ -59,7 +59,10 @@ describe("Transactions", () => {
   it("reads filters from the URL and writes changes back", async () => {
     renderPage("/transactions?month=2025-03&page=2");
 
-    await waitFor(() => expect(transactionsApi.list).toHaveBeenCalledWith({ month: "2025-03", page: 2, per_page: 50 }));
+    // an old ?month= link is read as that month's range
+    await waitFor(() =>
+      expect(transactionsApi.list).toHaveBeenCalledWith({ from: "2025-03-01", to: "2025-03-31", page: 2, per_page: 50 })
+    );
     await screen.findByText("LANCHONETE EXEMPLO");
 
     await userEvent.selectOptions(screen.getByLabelText("Category"), "1");
@@ -220,5 +223,100 @@ describe("Transactions", () => {
     expect(within(row).getByRole("button", { name: "Recategorizar" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Transações" })).toBeInTheDocument();
     expect(screen.getByTestId("transactions-summary")).toHaveTextContent(/2 transações/);
+  });
+
+  describe("dates, sorting and statements", () => {
+    it("filters by a date range and keeps it in the URL", async () => {
+      renderPage();
+      await screen.findByText("LANCHONETE EXEMPLO");
+
+      await userEvent.selectOptions(screen.getByLabelText("Quick date range"), "03/2025");
+
+      expect(screen.getByTestId("location")).toHaveTextContent("?from=2025-03-01&to=2025-03-31");
+      await waitFor(() =>
+        expect(transactionsApi.list).toHaveBeenLastCalledWith({ from: "2025-03-01", to: "2025-03-31", page: 1, per_page: 50 })
+      );
+
+      fireEvent.change(screen.getByLabelText("From"), { target: { value: "2025-03-10" } });
+      expect(screen.getByTestId("location")).toHaveTextContent("?from=2025-03-10&to=2025-03-31");
+      expect(screen.getByLabelText("Quick date range")).toHaveValue("custom");
+    });
+
+    it("drops an old month link once the range changes", async () => {
+      renderPage("/transactions?month=2025-03");
+      await screen.findByText("LANCHONETE EXEMPLO");
+
+      expect(screen.getByLabelText("From")).toHaveValue("2025-03-01");
+      await userEvent.selectOptions(screen.getByLabelText("Quick date range"), "All dates");
+
+      expect(screen.getByTestId("location")).toHaveTextContent(/^$/);
+    });
+
+    it("sorts from the menu and from the column headers", async () => {
+      renderPage();
+      await screen.findByText("LANCHONETE EXEMPLO");
+
+      expect(screen.getByRole("columnheader", { name: /Date/ })).toHaveAttribute("aria-sort", "descending");
+      await userEvent.selectOptions(screen.getByLabelText("Sort by"), "amount_desc");
+      expect(screen.getByTestId("location")).toHaveTextContent("?sort=amount_desc");
+      await waitFor(() => expect(transactionsApi.list).toHaveBeenLastCalledWith({ sort: "amount_desc", page: 1, per_page: 50 }));
+      expect(screen.getByRole("columnheader", { name: /Amount/ })).toHaveAttribute("aria-sort", "descending");
+
+      await userEvent.click(screen.getByRole("button", { name: /^Amount/ }));
+      expect(screen.getByTestId("location")).toHaveTextContent("?sort=amount_asc");
+
+      await userEvent.click(screen.getByRole("button", { name: /^Name/ }));
+      expect(screen.getByTestId("location")).toHaveTextContent("?sort=name_asc");
+
+      // back to the default order: no sort in the URL
+      await userEvent.click(screen.getByRole("button", { name: /^Date/ }));
+      expect(screen.getByTestId("location")).toHaveTextContent(/^$/);
+    });
+
+    it("ignores an unknown sort in the URL", async () => {
+      renderPage("/transactions?sort=bogus");
+
+      await waitFor(() => expect(transactionsApi.list).toHaveBeenCalledWith({ page: 1, per_page: 50 }));
+    });
+
+    it("lists one statement's transactions from the statements panel, and clears it", async () => {
+      vi.mocked(statementsApi.list).mockResolvedValue([
+        { id: 7, filename: "fatura-07.csv", created_at: "2025-03-01", first_transaction_date: "2025-02-01", last_transaction_date: "2025-02-28", status: "processed", transactions_count: 2 },
+      ]);
+      renderPage("/transactions?statements=open&from=2025-01-01");
+      await screen.findByText("LANCHONETE EXEMPLO");
+
+      await userEvent.click(await screen.findByRole("button", { name: "Show the transactions of fatura-07.csv" }));
+
+      expect(screen.getByTestId("location")).toHaveTextContent("?statements=open&monthly_statement_id=7");
+      await waitFor(() => expect(transactionsApi.list).toHaveBeenLastCalledWith({ monthly_statement_id: "7", page: 1, per_page: 50 }));
+      expect(screen.getByTestId("statement-filter")).toHaveTextContent("Statement: fatura-07.csv");
+
+      await userEvent.click(screen.getByRole("button", { name: "Show every statement" }));
+      expect(screen.getByTestId("location")).toHaveTextContent("?statements=open");
+    });
+
+    it("reloads statements and transactions after an import", async () => {
+      vi.mocked(statementsApi.upload).mockResolvedValue({ statement: { id: 8 }, summary_lines: [] });
+      renderPage("/transactions?statements=open");
+      await screen.findByText("LANCHONETE EXEMPLO");
+      const loads = vi.mocked(transactionsApi.list).mock.calls.length;
+
+      await userEvent.upload(screen.getByLabelText("Statement file"), new File(["x"], "march.csv", { type: "text/csv" }));
+      await userEvent.click(screen.getByRole("button", { name: "Import" }));
+
+      await waitFor(() => expect(statementsApi.list).toHaveBeenCalledTimes(2));
+      expect(vi.mocked(transactionsApi.list).mock.calls.length).toBeGreaterThan(loads);
+    });
+
+    it("clears every filter but keeps the sort", async () => {
+      renderPage("/transactions?from=2025-03-01&category_id=1&q=uber&sort=name_asc");
+      await screen.findByText("LANCHONETE EXEMPLO");
+
+      await userEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+
+      expect(screen.getByTestId("location")).toHaveTextContent("?sort=name_asc");
+      expect(screen.getByLabelText("Search")).toHaveValue("");
+    });
   });
 });

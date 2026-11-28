@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import { categoriesApi, keywordsApi, profilesApi, sessionApi } from "./api";
+import { categoriesApi, keywordsApi, profilesApi, sessionApi, transactionsApi } from "./api";
 import App from "./App";
 import { profile } from "./test/fixtures";
 
@@ -78,6 +78,17 @@ describe("App", () => {
     expect(await screen.findByRole("heading", { name: "Categorization" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /All rules/ })).toHaveAttribute("aria-selected", "true"); // /keywords → rules tab
     expect(sessionApi.signIn).toHaveBeenCalledWith(2, undefined);
+  });
+
+  it("sends the old statements page to the transactions page with its statements open", async () => {
+    signedInAs();
+    vi.mocked(transactionsApi.list).mockResolvedValue({ transactions: [], meta: { total_count: 0, total_amount: 0, page: 1, per_page: 50, months: [] } });
+    vi.mocked(categoriesApi.list).mockResolvedValue([]);
+
+    renderAt("/statements");
+
+    expect(await screen.findByRole("heading", { name: "Transactions" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Statements ·/ })).toHaveAttribute("aria-expanded", "true");
   });
 
   it("goes back to the picker when the session can't be restored", async () => {

@@ -20,7 +20,8 @@ export const mockApiModule = () => ({
     signOut: vi.fn(async () => {}),
     hasToken: vi.fn(() => false),
   },
-  statementsApi: { list: vi.fn(), upload: vi.fn(), remove: vi.fn() },
+  // The transactions page lists statements too; empty unless a test sets some.
+  statementsApi: { list: vi.fn(async () => []), upload: vi.fn(), remove: vi.fn() },
   categoriesApi: { list: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn() },
   subcategoriesApi: { list: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn() },
   keywordsApi: { list: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn(), health: vi.fn(async () => []) },
