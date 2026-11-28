@@ -2,11 +2,18 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { asset } from "../../test/fixtures";
+import { inLocale } from "../../test/i18n";
 import AssetFormModal from "./AssetFormModal";
 import { EMPTY_ASSET_FORM, validateAsset } from "./assetForm";
-import { inLocale } from "../../test/i18n";
 
 const assetTypes = { reserva: "Reserva", criptomoedas: "Criptomoedas" };
+
+const renderForm = (props: Partial<Parameters<typeof AssetFormModal>[0]> = {}) => {
+  const onSave = vi.fn(async () => {});
+  const onClose = vi.fn();
+  render(<AssetFormModal asset={null} assetTypes={assetTypes} onSave={onSave} onClose={onClose} errorText="Could not save the asset." {...props} />);
+  return { onSave, onClose };
+};
 
 describe("validateAsset", () => {
   it("requires type, description, a valid value, rating 1-10 and a positive quantity", () => {
@@ -21,23 +28,22 @@ describe("validateAsset", () => {
 });
 
 describe("AssetFormModal", () => {
-  it("shows validation errors instead of saving", async () => {
-    const onSave = vi.fn();
-    render(<AssetFormModal open mode="create" onClose={vi.fn()} onSave={onSave} assetTypes={assetTypes} />);
+  it("shows validation errors next to the fields instead of saving", async () => {
+    const { onSave } = renderForm();
 
-    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    expect(screen.getByRole("dialog", { name: "New asset" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Add asset" }));
 
     expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Description")).toHaveClass("is-invalid");
     expect(screen.getByText("Description is required")).toBeInTheDocument();
   });
 
   it("edits an asset and sends the parsed amount", async () => {
-    const onSave = vi.fn();
-    const onClose = vi.fn();
-    render(<AssetFormModal open mode="edit" asset={asset()} onClose={onClose} onSave={onSave} assetTypes={assetTypes} />);
+    const { onSave } = renderForm({ asset: asset({ current_value: 1500.5 }) });
 
-    const value = screen.getByLabelText(/Current value/);
-    expect(value).toHaveValue("1500");
+    const value = screen.getByLabelText("Current value (total)");
+    expect(value).toHaveValue("1500,5");
     await userEvent.clear(value);
     await userEvent.type(value, "2.345,67");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
@@ -50,23 +56,30 @@ describe("AssetFormModal", () => {
       rating: 5,
       quantity: 1,
     });
-    expect(onClose).toHaveBeenCalled();
   });
 
-  it("does not offer the 'Todos' filter as an asset type", async () => {
-    render(<AssetFormModal open mode="create" onClose={vi.fn()} onSave={vi.fn()} assetTypes={{ Todos: "Todos", ...assetTypes }} />);
+  it("keeps the dialog open with a message when saving fails", async () => {
+    renderForm({ asset: asset(), onSave: vi.fn(async () => Promise.reject(new Error("down"))) });
 
-    await userEvent.click(screen.getByRole("combobox"));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
-    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["Emergency reserve", "Crypto"]);
+    expect(await screen.findByText("Could not save the asset.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+  });
+
+  it("does not offer the 'Todos' filter as an asset type", () => {
+    renderForm({ assetTypes: { Todos: "Todos", ...assetTypes } });
+
+    const options = Array.from((screen.getByLabelText("Asset type") as HTMLSelectElement).options).slice(1);
+    expect(options.map((o) => o.textContent)).toEqual(["Emergency reserve", "Crypto"]);
   });
 
   it("speaks Portuguese when that is the language", async () => {
-    render(inLocale("pt-BR", <AssetFormModal open mode="create" onClose={vi.fn()} onSave={vi.fn()} assetTypes={assetTypes} />));
+    render(inLocale("pt-BR", <AssetFormModal asset={null} assetTypes={assetTypes} onSave={vi.fn()} onClose={vi.fn()} errorText="x" />));
 
-    await userEvent.click(screen.getByRole("button", { name: "Adicionar" }));
+    await userEvent.click(screen.getByRole("button", { name: "Adicionar ativo" }));
 
-    expect(screen.getByText("Adicionar novo ativo")).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Novo ativo" })).toBeInTheDocument();
     expect(screen.getByText("Descrição é obrigatória")).toBeInTheDocument();
   });
 });
