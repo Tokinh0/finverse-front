@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Alert, Button, Card, Container, Form } from "react-bootstrap";
 import { ApiError, settingsApi } from "../api";
 import { ErrorMessage, Loading } from "../components/LoadingState";
+import MarketDataSettingsCard from "../components/market/MarketDataSettingsCard";
 import ProfileSettingsCard from "../components/profiles/ProfileSettingsCard";
 import { useSuggestionsSummary } from "../hooks/suggestionsSummary";
 import { useI18n } from "../i18n/context";
@@ -127,6 +128,7 @@ export default function Settings() {
 
       <ProfileSettingsCard />
       <LanguageCard />
+      <MarketDataSettingsCard />
 
       <Card>
         <Card.Body className="d-grid gap-3">

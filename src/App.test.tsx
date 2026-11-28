@@ -7,8 +7,9 @@ import App from "./App";
 import { profile } from "./test/fixtures";
 
 vi.mock("./api", async () => (await import("./test/mockApi")).mockApiModule());
-// The dashboard embeds TradingView, which jsdom can't run.
+// The Market page embeds TradingView, which jsdom can't run.
 vi.mock("./components/TradingViewWidget", () => ({ default: () => null }));
+vi.mock("./components/market/TradingViewMarketQuotes", () => ({ default: () => null }));
 
 const renderAt = (path: string) =>
   render(
@@ -44,13 +45,21 @@ describe("App", () => {
     expect(await screen.findByRole("tab", { name: "Categories" })).toHaveAttribute("aria-selected", "true");
   });
 
-  it("opens the dashboard right away from home when already signed in", async () => {
+  it("opens the Market page right away from home when already signed in", async () => {
     signedInAs();
 
     renderAt("/");
 
-    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Market", level: 1 })).toBeInTheDocument();
     expect(profilesApi.list).not.toHaveBeenCalled();
+  });
+
+  it("sends the old painel link to the Market page", async () => {
+    signedInAs();
+
+    renderAt("/painel");
+
+    expect(await screen.findByRole("heading", { name: "Market", level: 1 })).toBeInTheDocument();
   });
 
   it("shows the profile picker when nobody is signed in, then returns to the requested page", async () => {
@@ -86,7 +95,7 @@ describe("App", () => {
     signedInAs();
     vi.mocked(profilesApi.list).mockResolvedValue([profile(), profile({ id: 2, name: "Blake" })]);
 
-    renderAt("/painel");
+    renderAt("/market");
     await userEvent.click(await screen.findByRole("button", { name: "Profile: Alex" }));
     await userEvent.click(screen.getByRole("button", { name: "Switch profile" }));
 

@@ -15,7 +15,7 @@ import "./ProfilePicker.css";
 const useDestination = () => {
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from;
-  return from && from !== "/" ? from : "/painel";
+  return from && from !== "/" ? from : "/market";
 };
 
 const errorText = (err: unknown, fallback: string) => (err instanceof ApiError ? apiErrorText(err.body, fallback) : fallback);
