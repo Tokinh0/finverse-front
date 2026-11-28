@@ -30,7 +30,7 @@ Finverse frontend: React 19 + TypeScript + Vite. It's the UI for the Finverse Ra
 
 ```bash
 npm install
-npm run dev          # Vite on :5173 (or: docker compose up)
+npm run dev          # Vite on :5173 (or: docker compose up; FRONT_PORT and VITE_FINVERSE_API_URL override the port and API)
 npm test             # Vitest, single run
 npm run test:watch
 npx vitest run src/pages/Categorization.test.tsx   # one file
@@ -39,7 +39,7 @@ npm run lint         # ESLint (typescript-eslint, react-hooks)
 npm run typecheck    # tsc --noEmit (strict, noUnusedLocals)
 npm run build        # typecheck + production build
 ```
-The API base URL comes from `VITE_FINVERSE_API_URL` (set in `.env` and `docker-compose.yml`) and falls back to `http://localhost:3000`.
+The API base URL comes from `VITE_FINVERSE_API_URL` (set in `.env` and `docker-compose.yml`) and falls back to `http://localhost:3000`. To work on a branch beside this folder, use `bin/worktree add <name>` in the API repo (`../finverse`): it creates `../finverse-front-<name>` with its own API URL and port in `.env.local` (see the API's CLAUDE.md).
 
 ## Architecture
 
