@@ -102,7 +102,7 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
     watchlist,
   ]);
 
-  const trackMarkets = useI18n().t.dashboard.trackMarkets;
+  const trackMarkets = useI18n().t.market.trackMarkets;
 
   return (
     <div

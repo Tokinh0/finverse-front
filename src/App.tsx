@@ -6,8 +6,8 @@ import { usePersistentToggle } from "./hooks/usePersistentToggle";
 import I18nProvider from "./i18n/I18nProvider";
 import ChargeAlerts from "./pages/ChargeAlerts";
 import CategorySubcategoryManager from "./pages/CategorySubcategoryManager";
-import Dashboard from "./pages/Dashboard";
 import KeywordsCrud from "./pages/KeywordsCrud";
+import Market from "./pages/Market";
 import PortfolioDashboard from "./pages/PortfolioDashboard";
 import ProfilePicker from "./pages/ProfilePicker";
 import Settings from "./pages/Settings";
@@ -40,10 +40,12 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* Home: the profile picker, or straight to the dashboard when already signed in. */}
-      <Route path="/" element={status === "signedIn" ? <Navigate to="/painel" replace /> : <ProfilePicker />} />
+      {/* Home: the profile picker, or straight to the Market page when already signed in. */}
+      <Route path="/" element={status === "signedIn" ? <Navigate to="/market" replace /> : <ProfilePicker />} />
+      {/* The Market page used to be the "painel"; keep old links working. */}
+      <Route path="/painel" element={<Navigate to="/market" replace />} />
       <Route element={<SignedInLayout showTotals={showTotals} setShowTotals={setShowTotals} />}>
-        <Route path="/painel" element={<Dashboard />} />
+        <Route path="/market" element={<Market showTotals={showTotals} />} />
         <Route path="/statements" element={<Statements />} />
         <Route path="/transactions" element={<Transactions showTotals={showTotals} />} />
         <Route path="/alerts" element={<ChargeAlerts showTotals={showTotals} />} />

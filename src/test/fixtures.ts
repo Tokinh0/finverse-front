@@ -1,5 +1,8 @@
 import type {
   Asset,
+  AssetValuation,
+  AssetValuationRow,
+  MarketOverview,
   CategorizationProgressMonth,
   Category,
   CategorySuggestion,
@@ -174,5 +177,70 @@ export const profile = (overrides: Partial<Profile> = {}): Profile => ({
   color_code: null,
   locale: "en",
   password_protected: false,
+  ...overrides,
+});
+
+export const marketOverview = (overrides: Partial<MarketOverview> = {}): MarketOverview => ({
+  groups: [
+    {
+      key: "currencies",
+      quotes: [
+        { key: "usd", price: 5.5582, currency: "BRL", change_pct: -1.65, as_of: "2026-11-27T21:35:19Z", source: "AwesomeAPI", unit: "currency" },
+        { key: "eur", error: "unavailable" },
+      ],
+    },
+    {
+      key: "crypto",
+      quotes: [
+        {
+          key: "btc", price: 330000, currency: "BRL", change_pct: 2.5, as_of: "2026-11-28T05:16:24Z", source: "CoinGecko",
+          unit: "currency", price_usd: 60000, change_pct_usd: 1.2,
+        },
+      ],
+    },
+    {
+      key: "brazil",
+      quotes: [
+        { key: "ibovespa", error: "needs_token" },
+        { key: "selic", price: 13.75, currency: null, change_pct: null, as_of: "2026-11-26", source: "Banco Central", unit: "percent" },
+      ],
+    },
+  ],
+  brapi_configured: false,
+  generated_at: "2026-11-28T05:16:33Z",
+  ...overrides,
+});
+
+export const valuationRow = (overrides: Partial<AssetValuationRow> = {}): AssetValuationRow => ({
+  id: 1,
+  ticker: "BTC",
+  description: "Bitcoin",
+  asset_type: "criptomoedas",
+  asset_type_label: "Criptomoedas",
+  quantity: 0.5,
+  saved_unit_price: 200000,
+  saved_value: 100000,
+  status: "priced",
+  unit_price: 300000,
+  live_value: 150000,
+  quote_currency: "BRL",
+  change_pct: -4.5,
+  as_of: "2026-11-28T05:16:24Z",
+  source: "CoinGecko",
+  ...overrides,
+});
+
+export const assetValuation = (overrides: Partial<AssetValuation> = {}): AssetValuation => ({
+  assets: [
+    valuationRow(),
+    valuationRow({
+      id: 2, ticker: "LTN", description: "Tesouro Prefixado", asset_type: "renda_fixa", asset_type_label: "Renda Fixa",
+      quantity: 1, saved_unit_price: null, saved_value: 5000, status: "manual", unit_price: null, live_value: null,
+      quote_currency: null, change_pct: null, as_of: null, source: null,
+    }),
+  ],
+  totals: { priced_count: 1, saved_value: 100000, live_value: 150000 },
+  brapi_configured: false,
+  usd_brl: 5.5,
   ...overrides,
 });

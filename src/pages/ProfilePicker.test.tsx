@@ -20,7 +20,7 @@ function renderPicker(signIn: ProfileState["signIn"] = vi.fn(async () => {}), st
       <MemoryRouter initialEntries={[{ pathname: "/", state }]}>
         <Routes>
           <Route path="/" element={<ProfilePicker />} />
-          <Route path="/painel" element={<p>dashboard page</p>} />
+          <Route path="/market" element={<p>market page</p>} />
           <Route path="/alerts" element={<p>alerts page</p>} />
         </Routes>
       </MemoryRouter>
@@ -38,14 +38,14 @@ describe("ProfilePicker", () => {
     expect(screen.getByRole("button", { name: "Add profile" })).toBeInTheDocument();
   });
 
-  it("enters a profile without a password right away and opens the dashboard", async () => {
+  it("enters a profile without a password right away and opens the Market page", async () => {
     vi.mocked(profilesApi.list).mockResolvedValue([alex, blake]);
     const signIn = renderPicker();
 
     await userEvent.click(await screen.findByRole("button", { name: "Enter as Blake" }));
 
     expect(signIn).toHaveBeenCalledWith(blake, undefined);
-    expect(await screen.findByText("dashboard page")).toBeInTheDocument();
+    expect(await screen.findByText("market page")).toBeInTheDocument();
   });
 
   it("asks for the password of a protected profile and shows a wrong one", async () => {
@@ -81,7 +81,7 @@ describe("ProfilePicker", () => {
 
     expect(profilesApi.create).toHaveBeenCalledWith({ name: "Lia", locale: "en", password: "secret1" });
     expect(signIn).toHaveBeenCalledWith(created, "secret1");
-    expect(await screen.findByText("dashboard page")).toBeInTheDocument();
+    expect(await screen.findByText("market page")).toBeInTheDocument();
   });
 
   it("shows why a profile couldn't be created", async () => {

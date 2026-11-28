@@ -398,3 +398,72 @@ export interface Profile {
   locale: string;
   password_protected: boolean;
 }
+
+// Market (GET /market, GET /market/assets, /settings/market)
+export type MarketQuoteError = "unavailable" | "needs_token";
+
+export interface MarketQuote {
+  key: string;
+  price?: number;
+  currency?: string | null;
+  change_pct?: number | null;
+  as_of?: string | null;
+  source?: string;
+  unit?: "currency" | "percent";
+  /** Crypto only: the price in US dollars and its 24h change. */
+  price_usd?: number | null;
+  change_pct_usd?: number | null;
+  error?: MarketQuoteError;
+}
+
+export interface MarketGroup {
+  key: "currencies" | "crypto" | "brazil";
+  quotes: MarketQuote[];
+}
+
+export interface MarketOverview {
+  groups: MarketGroup[];
+  brapi_configured: boolean;
+  generated_at: string;
+}
+
+export type AssetPriceStatus =
+  | "priced"
+  | "not_found"
+  | "manual"
+  | "no_ticker"
+  | "no_quantity"
+  | "needs_token"
+  | "unavailable";
+
+export interface AssetValuationRow {
+  id: number;
+  ticker: string | null;
+  description: string | null;
+  asset_type: string | null;
+  asset_type_label: string | null;
+  quantity: number | null;
+  saved_unit_price: number | null;
+  saved_value: number | null;
+  status: AssetPriceStatus;
+  unit_price: number | null;
+  live_value: number | null;
+  quote_currency: string | null;
+  change_pct: number | null;
+  as_of: string | null;
+  source: string | null;
+}
+
+export interface AssetValuation {
+  assets: AssetValuationRow[];
+  totals: { priced_count: number; saved_value: number; live_value: number };
+  brapi_configured: boolean;
+  usd_brl: number | null;
+  updated_count?: number;
+}
+
+export interface MarketSettings {
+  brapi_configured: boolean;
+  masked_brapi_token: string | null;
+  brapi_from_env: boolean;
+}

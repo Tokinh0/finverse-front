@@ -20,7 +20,7 @@ describe("AppNavbar", () => {
     expect(screen.getByRole("link", { name: "Keywords" })).toHaveClass("active");
     expect(screen.getByRole("link", { name: "Statements" })).toHaveAttribute("href", "/statements");
     expect(screen.queryByRole("link", { name: "Goals" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute("href", "/painel");
+    expect(screen.getByRole("link", { name: "Market" })).toHaveAttribute("href", "/market");
 
     await userEvent.click(screen.getByRole("checkbox"));
     expect(setShowTotals).toHaveBeenCalledWith(true);

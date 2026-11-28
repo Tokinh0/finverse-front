@@ -3,7 +3,10 @@ import { clearSessionToken, currentSessionToken, setSessionToken } from "./sessi
 import type {
   CategorizationProgressMonth,
   CategorySuggestion,
+  AssetValuation,
   ClaudeSettings,
+  MarketOverview,
+  MarketSettings,
   KeywordHealth,
   Reapply,
   RuleDecisionResult,
@@ -177,6 +180,18 @@ export const settingsApi = {
   updateClaude: (claude: { api_key?: string; model?: string }) =>
     apiRequest<ClaudeSettings>("/settings/claude", { method: "PUT", json: { claude } }),
   removeClaudeKey: () => apiRequest<ClaudeSettings>("/settings/claude", { method: "DELETE" }),
+  market: () => apiRequest<MarketSettings>("/settings/market"),
+  updateMarket: (market: { brapi_token: string }) =>
+    apiRequest<MarketSettings>("/settings/market", { method: "PUT", json: { market } }),
+  removeBrapiToken: () => apiRequest<MarketSettings>("/settings/market", { method: "DELETE" }),
+};
+
+export const marketApi = {
+  overview: () => apiRequest<MarketOverview>("/market"),
+  assets: () => apiRequest<AssetValuation>("/market/assets"),
+  /** Saves today's prices on the assets (all priced ones, or only `assetIds`). */
+  applyAssetPrices: (assetIds?: number[]) =>
+    apiRequest<AssetValuation>("/market/assets/apply", { method: "POST", json: assetIds ? { asset_ids: assetIds } : {} }),
 };
 
 export const suggestionsApi = {

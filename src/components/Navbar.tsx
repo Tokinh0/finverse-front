@@ -11,7 +11,7 @@ interface Props {
 }
 
 const LINKS = [
-  { to: "/painel", key: "dashboard" },
+  { to: "/market", key: "market" },
   { to: "/statements", key: "statements" },
   { to: "/transactions", key: "transactions" },
   { to: "/alerts", key: "reviewCharges" },
@@ -29,7 +29,7 @@ export default function AppNavbar({ showTotals, setShowTotals }: Props) {
   return (
     <Navbar bg="dark" variant="dark" expand="md" className="mb-4" fixed="top">
       <Container>
-        <Navbar.Brand as={Link} to="/painel">
+        <Navbar.Brand as={Link} to="/market">
           Finverse
         </Navbar.Brand>
         <Navbar.Toggle aria-controls="main-navbar-nav" />
