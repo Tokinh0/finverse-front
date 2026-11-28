@@ -19,7 +19,8 @@ describe("AppNavbar", () => {
 
     expect(screen.getByRole("link", { name: "Categorization" })).toHaveClass("active");
     expect(screen.queryByRole("link", { name: "Keywords" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Statements" })).toHaveAttribute("href", "/statements");
+    expect(screen.getByRole("link", { name: "Transactions" })).toHaveAttribute("href", "/transactions");
+    expect(screen.queryByRole("link", { name: "Statements" })).not.toBeInTheDocument(); // they live on Transactions
     expect(screen.queryByRole("link", { name: "Goals" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Market" })).toHaveAttribute("href", "/market");
 

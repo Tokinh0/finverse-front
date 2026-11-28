@@ -137,11 +137,34 @@ export interface TransactionsPage {
     per_page: number;
     /** months that have transactions, "YYYY-MM", newest first */
     months: string[];
+    /** the sort applied (the default when none or an unknown one was asked for) */
+    sort?: TransactionSort;
+    /** the date range applied, ISO dates; null when that end is open */
+    from?: string | null;
+    to?: string | null;
+    /** the profile's first and last transaction dates, whatever the filters */
+    first_date?: string | null;
+    last_date?: string | null;
   };
 }
 
+/** The orders GET /transactions accepts (`sort`); see src/utils/transactionFilters.ts. */
+export type TransactionSort =
+  | "date_desc"
+  | "date_asc"
+  | "amount_desc"
+  | "amount_asc"
+  | "name_asc"
+  | "name_desc"
+  | "category_asc"
+  | "category_desc";
+
 export interface TransactionFilters {
-  month?: string;
+  /** ISO dates, inclusive; either end may be left open */
+  from?: string;
+  to?: string;
+  monthly_statement_id?: string;
+  sort?: string;
   category_id?: string;
   subcategory_id?: string;
   transaction_type?: string;

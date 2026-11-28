@@ -1,24 +1,40 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Badge, Button, Col, Container, Form, Row, Table } from "react-bootstrap";
 import { Link, useSearchParams } from "react-router-dom";
-import { categoriesApi, suggestionsApi, transactionsApi } from "../api";
+import { categoriesApi, statementsApi, suggestionsApi, transactionsApi } from "../api";
 import { ErrorMessage, Loading } from "../components/LoadingState";
 import RuleNudge from "../components/suggestions/RuleNudge";
 import SuggestionChip from "../components/suggestions/SuggestionChip";
+import DateRangeFilter from "../components/transactions/DateRangeFilter";
 import RecategorizeModal from "../components/transactions/RecategorizeModal";
+import StatementsPanel from "../components/transactions/StatementsPanel";
 import { useSuggestionsSummary } from "../hooks/suggestionsSummary";
 import { useI18n } from "../i18n/context";
 import type { Category, RecategorizeResult, RuleSuggestion, Transaction, TransactionFilters, TransactionsPage } from "../types";
-import { formatIsoDate, formatMonth } from "../utils/dates";
+import { MonthlyStatementPresenter } from "../presenters/MonthlyStatementPresenter";
+import { formatIsoDate } from "../utils/dates";
 import { formatCurrency } from "../utils/formatter";
 import { messages } from "../i18n/locale";
+import {
+  DEFAULT_SORT,
+  TRANSACTION_SORTS,
+  columnSortState,
+  isTransactionSort,
+  monthRange,
+  nextColumnSort,
+  type DateRange,
+  type SortableColumn,
+} from "../utils/transactionFilters";
 
 interface Props {
   showTotals: boolean;
 }
 
 const PER_PAGE = 50;
-const FILTER_KEYS = ["month", "category_id", "subcategory_id", "transaction_type", "q", "unknown"] as const;
+// Everything here lives in the URL, so links and the back button keep it. `month` (older links,
+// e.g. from Financial health) is read as that month's date range.
+const FILTER_KEYS = ["from", "to", "monthly_statement_id", "category_id", "subcategory_id", "transaction_type", "q", "unknown"] as const;
+type FilterKey = (typeof FILTER_KEYS)[number] | "sort" | "page";
 const BULK_CONFIDENCE = 0.9;
 
 const TYPE_BADGES: Record<string, string> = { debit: "secondary", credit: "success", unknown: "warning" };
@@ -39,6 +55,8 @@ export default function Transactions({ showTotals }: Props) {
   const tx = i18n.transactions;
   const HIDDEN = i18n.common.hiddenAmount;
   const [searchText, setSearchText] = useState(searchParams.get("q") ?? "");
+  const [statements, setStatements] = useState<MonthlyStatementPresenter[] | null>(null);
+  const [statementsError, setStatementsError] = useState<string | null>(null);
 
   const filters: TransactionFilters = useMemo(() => {
     const result: TransactionFilters = { page: Number(searchParams.get("page")) || 1, per_page: PER_PAGE };
@@ -46,20 +64,46 @@ export default function Transactions({ showTotals }: Props) {
       const value = searchParams.get(key);
       if (value) result[key] = value;
     });
+    const month = searchParams.get("month");
+    const legacy = month && !result.from && !result.to ? monthRange(month) : null;
+    if (legacy) Object.assign(result, legacy);
+    const sort = searchParams.get("sort");
+    if (isTransactionSort(sort) && sort !== DEFAULT_SORT) result.sort = sort;
     return result;
   }, [searchParams]);
 
+  const sort = isTransactionSort(filters.sort) ? filters.sort : DEFAULT_SORT;
+  const range: DateRange = { from: filters.from ?? "", to: filters.to ?? "" };
+
   const updateFilters = useCallback(
-    (changes: Partial<Record<(typeof FILTER_KEYS)[number] | "page", string>>) => {
+    (changes: Partial<Record<FilterKey, string>>) => {
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev);
         Object.entries(changes).forEach(([key, value]) => (value ? next.set(key, value) : next.delete(key)));
+        if ("from" in changes || "to" in changes) next.delete("month");
         if (!("page" in changes)) next.delete("page");
         return next;
       });
     },
     [setSearchParams]
   );
+
+  const loadStatements = useCallback(() => {
+    statementsApi
+      .list()
+      .then((list) => {
+        setStatements(MonthlyStatementPresenter.parseMany(list));
+        setStatementsError(null);
+      })
+      .catch((err) => {
+        console.error(err);
+        setStatementsError(messages().statements.loadError);
+      });
+  }, []);
+
+  useEffect(() => {
+    loadStatements();
+  }, [loadStatements]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -129,6 +173,38 @@ export default function Transactions({ showTotals }: Props) {
   const totalPages = data ? Math.max(1, Math.ceil(data.meta.total_count / data.meta.per_page)) : 1;
   const page = filters.page ?? 1;
   const hasFilters = FILTER_KEYS.some((key) => filters[key]);
+  const statementId = filters.monthly_statement_id ?? null;
+  const selectedStatement = statementId ? statements?.find((s) => String(s.id) === statementId) : undefined;
+
+  const clearFilters = () => {
+    setSearchText("");
+    setSearchParams((prev) => {
+      const next = new URLSearchParams();
+      const kept = prev.get("sort");
+      if (kept) next.set("sort", kept);
+      return next;
+    });
+  };
+
+  const sortHeader = (column: SortableColumn, label: string, className?: string) => {
+    const state = columnSortState(column, sort);
+    const next = nextColumnSort(column, sort);
+    return (
+      <th scope="col" className={className} aria-sort={state ?? "none"}>
+        <button
+          type="button"
+          className="btn btn-link p-0 text-reset fw-semibold text-decoration-none text-nowrap"
+          title={tx.sortColumn(label)}
+          onClick={() => updateFilters({ sort: next === DEFAULT_SORT ? "" : next })}
+        >
+          {label}{" "}
+          <span aria-hidden="true" className={state ? "" : "text-muted opacity-50"}>
+            {state === "ascending" ? "▲" : state === "descending" ? "▼" : "↕"}
+          </span>
+        </button>
+      </th>
+    );
+  };
 
   return (
     <Container className="mt-4 text-start">
@@ -141,19 +217,44 @@ export default function Transactions({ showTotals }: Props) {
         )}
       </div>
 
+      <StatementsPanel
+        statements={statements}
+        loadError={statementsError}
+        selectedId={statementId}
+        defaultOpen={searchParams.get("statements") === "open"}
+        onSelect={(id) => updateFilters({ monthly_statement_id: String(id), from: "", to: "" })}
+        onChanged={({ deletedId }) => {
+          loadStatements();
+          if (deletedId && String(deletedId) === statementId) updateFilters({ monthly_statement_id: "" });
+          else load();
+          refreshSummary();
+        }}
+      />
+
       <Form onSubmit={(e) => e.preventDefault()} className="mb-3">
         <Row className="g-2">
-          <Col xs={6} md={2}>
-            <Form.Select aria-label={tx.month} value={filters.month ?? ""} onChange={(e) => updateFilters({ month: e.target.value })}>
-              <option value="">{tx.allMonths}</option>
-              {data?.meta.months.map((month) => (
-                <option key={month} value={month}>
-                  {formatMonth(month)}
+          <Col xs={12} lg={9}>
+            <DateRangeFilter
+              range={range}
+              months={data?.meta.months ?? []}
+              min={data?.meta.first_date}
+              max={data?.meta.last_date}
+              onChange={(next) => updateFilters({ from: next.from, to: next.to })}
+            />
+          </Col>
+          <Col xs={12} lg={3}>
+            <Form.Select aria-label={tx.sortBy} value={sort} onChange={(e) => updateFilters({ sort: e.target.value === DEFAULT_SORT ? "" : e.target.value })}>
+              {TRANSACTION_SORTS.map((value) => (
+                <option key={value} value={value}>
+                  {tx.sortBy}: {tx.sorts[value]}
                 </option>
               ))}
             </Form.Select>
           </Col>
-          <Col xs={6} md={2}>
+          <Col xs={12} md={4}>
+            <Form.Control aria-label={tx.search} type="search" placeholder={tx.searchPlaceholder} value={searchText} onChange={(e) => setSearchText(e.target.value)} />
+          </Col>
+          <Col xs={6} md={3}>
             <Form.Select
               aria-label={tx.category}
               value={filters.category_id ?? ""}
@@ -177,7 +278,7 @@ export default function Transactions({ showTotals }: Props) {
               ))}
             </Form.Select>
           </Col>
-          <Col xs={6} md={2}>
+          <Col xs={12} md={2}>
             <Form.Select aria-label={tx.type} value={filters.transaction_type ?? ""} onChange={(e) => updateFilters({ transaction_type: e.target.value })}>
               <option value="">{tx.allTypes}</option>
               <option value="debit">{tx.types.debit}</option>
@@ -185,10 +286,7 @@ export default function Transactions({ showTotals }: Props) {
               <option value="unknown">{tx.types.unknown}</option>
             </Form.Select>
           </Col>
-          <Col xs={12} md={3}>
-            <Form.Control aria-label={tx.search} type="search" placeholder={tx.searchPlaceholder} value={searchText} onChange={(e) => setSearchText(e.target.value)} />
-          </Col>
-          <Col xs={12}>
+          <Col xs={12} className="d-flex flex-wrap align-items-center gap-3">
             <Form.Check
               type="switch"
               id="filter-unknown"
@@ -196,6 +294,26 @@ export default function Transactions({ showTotals }: Props) {
               checked={filters.unknown === "true"}
               onChange={(e) => updateFilters({ unknown: e.target.checked ? "true" : "" })}
             />
+            {statementId && (
+              <Badge bg="light" text="dark" className="border d-inline-flex align-items-center gap-2 fw-normal" data-testid="statement-filter">
+                {tx.statementFilter(selectedStatement?.filename ?? `#${statementId}`)}
+                <Button
+                  size="sm"
+                  variant="link"
+                  className="p-0 lh-1 text-reset"
+                  aria-label={tx.clearStatement}
+                  title={tx.clearStatement}
+                  onClick={() => updateFilters({ monthly_statement_id: "" })}
+                >
+                  ✕
+                </Button>
+              </Badge>
+            )}
+            {hasFilters && (
+              <Button size="sm" variant="link" className="p-0 ms-auto" onClick={clearFilters}>
+                {tx.clearFilters}
+              </Button>
+            )}
           </Col>
         </Row>
       </Form>
@@ -242,11 +360,11 @@ export default function Transactions({ showTotals }: Props) {
           <Table hover responsive size="sm" className="align-middle" style={{ opacity: loading ? 0.6 : 1 }}>
             <thead>
               <tr>
-                <th>{tx.columns.date}</th>
-                <th>{tx.columns.name}</th>
-                <th>{tx.columns.category}</th>
-                <th>{tx.columns.type}</th>
-                <th className="text-end">{tx.columns.amount}</th>
+                {sortHeader("date", tx.columns.date)}
+                {sortHeader("name", tx.columns.name)}
+                {sortHeader("category", tx.columns.category)}
+                <th scope="col">{tx.columns.type}</th>
+                {sortHeader("amount", tx.columns.amount, "text-end")}
                 <th />
               </tr>
             </thead>

@@ -12,7 +12,6 @@ interface Props {
 
 const LINKS = [
   { to: "/market", key: "market" },
-  { to: "/statements", key: "statements" },
   { to: "/transactions", key: "transactions" },
   { to: "/alerts", key: "reviewCharges" },
   { to: "/categorization", key: "categorization" },

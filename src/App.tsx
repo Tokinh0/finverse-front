@@ -10,7 +10,6 @@ import Market from "./pages/Market";
 import PortfolioDashboard from "./pages/PortfolioDashboard";
 import ProfilePicker from "./pages/ProfilePicker";
 import Settings from "./pages/Settings";
-import Statements from "./pages/Statements";
 import Suggestions from "./pages/Suggestions";
 import Transactions from "./pages/Transactions";
 import FinancialHealth from "./pages/reports/FinancialHealth";
@@ -45,7 +44,8 @@ function AppRoutes() {
       <Route path="/painel" element={<Navigate to="/market" replace />} />
       <Route element={<SignedInLayout showTotals={showTotals} setShowTotals={setShowTotals} />}>
         <Route path="/market" element={<Market showTotals={showTotals} />} />
-        <Route path="/statements" element={<Statements />} />
+        {/* Statements live on the transactions page now; open its statements panel. */}
+        <Route path="/statements" element={<Navigate to="/transactions?statements=open" replace />} />
         <Route path="/transactions" element={<Transactions showTotals={showTotals} />} />
         <Route path="/alerts" element={<ChargeAlerts showTotals={showTotals} />} />
         <Route path="/categorization" element={<Categorization />} />

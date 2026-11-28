@@ -60,9 +60,9 @@ describe("transactionsApi", () => {
   it("sends only the filters that are set", async () => {
     const fetchSpy = mockFetch(200, { transactions: [], meta: {} });
 
-    await transactionsApi.list({ month: "2025-03", q: "", page: 2 });
+    await transactionsApi.list({ from: "2025-03-01", to: "2025-03-31", q: "", sort: "amount_desc", page: 2 });
 
-    expect(fetchSpy.mock.calls[0][0]).toBe(`${API_BASE_URL}/api/v1/transactions?month=2025-03&page=2`);
+    expect(fetchSpy.mock.calls[0][0]).toBe(`${API_BASE_URL}/api/v1/transactions?from=2025-03-01&to=2025-03-31&sort=amount_desc&page=2`);
     expect(toQuery({})).toBe("");
   });
 
