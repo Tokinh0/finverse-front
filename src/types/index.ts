@@ -271,6 +271,66 @@ export interface FinancialHealthReport {
   categories?: HealthCategory[];
   trends?: { months: string[]; totals: number[]; categories: HealthTrendCategory[] };
   year?: HealthYear;
+  savings?: SavingsReport;
+}
+
+// Reports::SavingsOpportunities: where the owner could spend less (finverse/app/services/reports/savings_opportunities.rb)
+export type SavingsKind = "growing_merchant" | "frequent_small" | "growing_subcategory" | "fees";
+
+export interface SavingsSubcategoryRef {
+  id: number;
+  name: string;
+  category: string | null;
+  color_code: string | null;
+}
+
+export interface SavingsOpportunity {
+  kind: SavingsKind;
+  /** merchant name as it appears on statements, or the subcategory name; null for fees */
+  name: string | null;
+  /** text to search the merchant on /transactions */
+  query?: string;
+  subcategory?: SavingsSubcategoryRef;
+  monthly_now: number;
+  monthly_before?: number;
+  potential_monthly: number;
+  /** charges per month */
+  count_now?: number;
+  count_before?: number;
+  ticket_now?: number;
+  ticket_before?: number | null;
+  /** "YYYY-MM" */
+  first_seen?: string;
+  /** last 12 months, oldest first */
+  series: { month: string; total: number }[];
+  top_merchants?: { name: string; monthly: number }[];
+  items?: { name: string; total: number; count: number }[];
+}
+
+export interface SavingsSubscription {
+  name: string;
+  subcategory: SavingsSubcategoryRef;
+  monthly: number;
+  months: number;
+  last_charge: string;
+  price_change: { from: number; to: number } | null;
+}
+
+export interface SavingsReport {
+  period_months: number;
+  /** months before the period with data, used as the usual level */
+  baseline_months: number;
+  current_range?: { from: string; to: string };
+  baseline_range?: { from: string; to: string } | null;
+  summary?: {
+    potential_monthly: number;
+    potential_yearly: number;
+    spending_now: number;
+    spending_before: number | null;
+    lowest_month: { month: string; total: number } | null;
+  };
+  opportunities: SavingsOpportunity[];
+  subscriptions: { monthly: number; yearly: number; items: SavingsSubscription[] };
 }
 
 // Categorization suggestions (see finverse/app/presenters/*suggestion*_presenter.rb)

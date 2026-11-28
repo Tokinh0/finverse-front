@@ -82,6 +82,14 @@ describe("FinancialHealth", () => {
     expect(within(year).getByText("2025 spending")).toBeInTheDocument();
   });
 
+  it("shows where the owner can save", async () => {
+    renderPage();
+
+    const section = (await screen.findByRole("heading", { name: "Where you can save" })).closest("section")!;
+    expect(section).toHaveTextContent("Compared with your usual level: the average of the 10 months before this period.");
+    expect(within(section).getByRole("heading", { name: "IFOOD *RESTAURANTE" })).toBeInTheDocument();
+  });
+
   it("hides amounts but keeps ratios when totals are off", async () => {
     renderPage(undefined, false);
 
